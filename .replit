@@ -4,3 +4,42 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "info"
+
+[[workflows.workflow]]
+name = "info"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = """
+echo \"📦 Roblox Lua Project Repository
+
+This project contains Roblox game scripts and cannot run in Replit.
+
+To use these scripts:
+1. Open Roblox Studio
+2. Copy scripts to appropriate locations (see IMPLEMENTATION_GUIDE.md)
+3. Test in Roblox Studio
+
+Recent updates:
+- ✅ Client-side ball prediction
+- ✅ Double jump mechanic
+- ✅ Smart dash system
+- ✅ Player movement enhancements
+
+See README.md and IMPLEMENTATION_GUIDE.md for full details.\""""
+
+[workflows.workflow.metadata]
+outputType = "console"

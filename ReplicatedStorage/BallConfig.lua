@@ -32,6 +32,7 @@ BallConfig.Network = {
 
 BallConfig.Player = {
         WALKSPEED = 21,
+        DOUBLE_JUMP_POWER = 50,
 }
 
 BallConfig.Dash = {

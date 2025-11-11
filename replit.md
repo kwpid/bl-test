@@ -7,8 +7,9 @@ Professional Roblox ball parry game with client-side prediction, server-authorit
 **Player movement enhancements**:
 - ✅ Set default walkspeed to 21 (faster movement)
 - ✅ Added dash mechanic (Q key) with 5 second cooldown
-- ✅ Dash moves player in camera look direction
-- ✅ Dash animation support (optional)
+- ✅ Smart ball detection - dash toward ball if looking at it
+- ✅ Double jump mechanic with animation support
+- ✅ Faster dash (0.15s, more instant feel)
 
 **Previous: Complete code overhaul**:
 - ✅ Added client-side ball prediction for smooth gameplay
@@ -37,6 +38,7 @@ Professional Roblox ball parry game with client-side prediction, server-authorit
 - `BallClient.lua` - Client-side prediction
 - `InputClient.lua` - User input handling
 - `DashClient.lua` - Dash input (Q key)
+- `DoubleJumpClient.lua` - Double jump mechanic
 - ~~`LocalScript.lua`~~ - Deprecated
 
 ## Key Features
