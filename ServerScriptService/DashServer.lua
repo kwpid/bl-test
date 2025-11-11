@@ -1,10 +1,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 
-local DASH_DISTANCE = 25
-local DASH_DURATION = 0.15
-local DASH_COOLDOWN = 5
+local DASH_DISTANCE = 15
+local DASH_DURATION = 0.2
+local DASH_COOLDOWN = 3
 
 local dashEvent = ReplicatedStorage:FindFirstChild("DashEvent")
 if not dashEvent then
@@ -15,7 +14,7 @@ end
 
 local playerCooldowns = {}
 
-local function performDash(player, direction, allowVertical)
+local function performDash(player, direction)
         local character = player.Character
         if not character then return false end
         
@@ -29,32 +28,13 @@ local function performDash(player, direction, allowVertical)
         
         playerCooldowns[player.UserId] = true
         
-        local dashDirection
-        if allowVertical then
-                dashDirection = direction.Unit
-        else
-                dashDirection = Vector3.new(direction.X, 0, direction.Z).Unit
-        end
-        
-        local targetCFrame = hrp.CFrame + (dashDirection * DASH_DISTANCE)
+        local dashDirection = direction.Unit
+        local dashSpeed = DASH_DISTANCE / DASH_DURATION
         
         local bodyVelocity = Instance.new("BodyVelocity")
         bodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
-        bodyVelocity.Velocity = dashDirection * (DASH_DISTANCE / DASH_DURATION)
+        bodyVelocity.Velocity = dashDirection * dashSpeed
         bodyVelocity.Parent = hrp
-        
-        if allowVertical then
-                local bodyGyro = Instance.new("BodyGyro")
-                bodyGyro.MaxTorque = Vector3.new(0, 0, 0)
-                bodyGyro.P = 0
-                bodyGyro.Parent = hrp
-                
-                task.delay(DASH_DURATION, function()
-                        if bodyGyro and bodyGyro.Parent then
-                                bodyGyro:Destroy()
-                        end
-                end)
-        end
         
         local animator = humanoid:FindFirstChildOfClass("Animator")
         if not animator then
@@ -81,9 +61,9 @@ local function performDash(player, direction, allowVertical)
         return true
 end
 
-dashEvent.OnServerEvent:Connect(function(player, direction, allowVertical)
+dashEvent.OnServerEvent:Connect(function(player, direction)
         if not direction or typeof(direction) ~= "Vector3" then return end
-        performDash(player, direction, allowVertical)
+        performDash(player, direction)
 end)
 
 local function onPlayerRemoving(player)

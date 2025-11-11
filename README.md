@@ -19,11 +19,10 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 
 ### Movement System
 - **Enhanced Speed**: Walkspeed set to 21 (faster than default)
-- **Dash Mechanic**: Press Q to dash in camera direction (or toward ball if looking at it)
-- **Dash Cooldown**: 5 second cooldown between dashes
-- **Dash Distance**: 25 studs per dash over 0.15 seconds
-- **Double Jump**: Press jump while airborne for a second jump
-- **Aerial Control**: Vertical dash + double jump for advanced movement
+- **Dash Mechanic**: Press Shift to dash in camera direction (full 3D movement)
+- **Dash Cooldown**: 3 second cooldown between dashes
+- **Dash Distance**: 15 studs per dash over 0.2 seconds
+- **Aerial Movement**: Dash works in any direction including vertical
 
 ## Technical Details
 
@@ -59,8 +58,7 @@ SeverScriptService/
 StarterCharacterScripts/
 ├── BallClient.lua       # Client ball prediction
 ├── InputClient.lua      # Parry input handler
-├── DashClient.lua       # Dash input handler
-└── DoubleJumpClient.lua # Double jump mechanic
+└── DashClient.lua       # Dash input handler
 ```
 
 ## Note

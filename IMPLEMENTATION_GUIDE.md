@@ -55,7 +55,6 @@ The codebase has been completely overhauled with a professional, modular archite
    - Create `BallPhysics` ModuleScript
    - Ensure `Swords` folder exists with `DefaultSword` model
    - (Optional) Create `DashAnimation` Animation for dash animation
-   - (Optional) Create `DoubleJumpAnimation` Animation for double jump
 
    **ServerScriptService:**
    - Add `BallServer` Script
@@ -67,7 +66,6 @@ The codebase has been completely overhauled with a professional, modular archite
    - Add `BallClient` LocalScript
    - Add `InputClient` LocalScript
    - Add `DashClient` LocalScript
-   - Add `DoubleJumpClient` LocalScript
 
 3. **Required workspace objects** (same as before):
    - `Ball` part in Workspace
@@ -95,14 +93,13 @@ Parry = {
 
 Player = {
     WALKSPEED = 21,            -- Default player walkspeed
-    DOUBLE_JUMP_POWER = 50,    -- Vertical velocity for double jump
 }
 
 Dash = {
-    DISTANCE = 25,             -- Dash distance in studs
-    DURATION = 0.3,            -- Dash duration in seconds
-    COOLDOWN = 5,              -- Cooldown between dashes
-    KEYBIND = Enum.KeyCode.Q,  -- Key to press for dash
+    DISTANCE = 15,             -- Dash distance in studs
+    DURATION = 0.2,            -- Dash duration in seconds
+    COOLDOWN = 3,              -- Cooldown between dashes
+    KEYBIND = Enum.KeyCode.LeftShift,  -- Key to press for dash
 }
 
 Network = {
