@@ -1,20 +1,5 @@
-local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- DEPRECATED: This file has been replaced by the new modular system
+-- Use BallClient.lua and InputClient.lua instead
+-- This file is kept for reference only
 
-local swingEvent = ReplicatedStorage:WaitForChild("SwingEvent")
-local ballHitEvent = ReplicatedStorage:WaitForChild("BallHitEvent")
-local player = Players.LocalPlayer
-local camera = workspace.CurrentCamera
-
-UIS.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		swingEvent:FireServer()
-	end
-end)
-
-ballHitEvent.OnClientEvent:Connect(function()
-	local cameraDirection = camera.CFrame.LookVector
-	ballHitEvent:FireServer(cameraDirection)
-end)
+warn("LocalScript.lua is deprecated. Please use the new BallClient.lua and InputClient.lua instead.")
