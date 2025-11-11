@@ -23,6 +23,9 @@ BallConfig.Parry = {
         RANGE = 10,
         COOLDOWN = 0.5,
         TIMEOUT = 5,
+        MIN_PARRY_TIME = 0.05,
+        HIT_IMMUNITY_TIME = 0.5,
+        MIN_HIT_INTERVAL = 0.1,
 }
 
 BallConfig.Network = {

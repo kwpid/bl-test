@@ -4,11 +4,16 @@
 Professional Roblox ball parry game with client-side prediction, server-authoritative physics, and modular architecture.
 
 ## Recent Changes (Latest Update)
-**Player movement enhancements**:
-- ✅ Set default walkspeed to 21 (faster movement)
+**Hit detection improvements**:
+- ✅ Fixed double-hit bug when ball bounces off walls
+- ✅ Added 0.5s immunity after successful hit
+- ✅ Improved hit validation and reliability
+- ✅ Added minimum parry window time (0.05s)
+- ✅ Better server-side hit verification
+
+**Player movement**:
 - ✅ Dash mechanic (Shift key) - 15 studs in 0.2s
-- ✅ Dash in camera direction (including vertical)
-- ✅ 3 second cooldown for balanced gameplay
+- ✅ Walkspeed set to 21
 
 **Previous: Complete code overhaul**:
 - ✅ Added client-side ball prediction for smooth gameplay
