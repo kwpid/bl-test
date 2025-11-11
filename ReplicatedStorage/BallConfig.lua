@@ -36,9 +36,11 @@ BallConfig.Player = {
 
 BallConfig.Dash = {
         DISTANCE = 25,
-        DURATION = 0.3,
+        DURATION = 0.15,
         COOLDOWN = 5,
         KEYBIND = Enum.KeyCode.Q,
+        BALL_DETECTION_ANGLE = 30,
+        BALL_DETECTION_DISTANCE = 50,
 }
 
 return BallConfig
