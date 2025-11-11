@@ -9,12 +9,19 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 - **Speed Mechanics**: Progressive speed increase with each successful hit (20 → 150 studs/sec)
 - **Visual Effects**: Dynamic trail that changes color based on ball speed
 - **Smart Collision**: Raycasting-based collision detection with smooth interpolation
+- **Client Prediction**: Smooth ball movement with zero perceived latency
 
 ### Combat System
 - **Sword Parrying**: Timing-based parrying mechanic with 10-stud range
 - **Animations**: Two-state animation system (miss/success)
 - **Cooldown System**: Prevents spam clicking
 - **Auto-Equipment**: Swords automatically attach to player characters
+
+### Movement System
+- **Enhanced Speed**: Walkspeed set to 21 (faster than default)
+- **Dash Mechanic**: Press Q to dash in camera direction
+- **Dash Cooldown**: 5 second cooldown between dashes
+- **Dash Distance**: 25 studs per dash over 0.3 seconds
 
 ## Technical Details
 
@@ -37,12 +44,20 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 
 ## Project Structure
 ```
+ReplicatedStorage/
+├── BallConfig.lua       # Centralized configuration
+└── BallPhysics.lua      # Shared physics engine
+
 SeverScriptService/
-├── BallSever.lua      # Ball physics engine
-└── swap.lua           # Sword/parry system
+├── BallServer.lua       # Server ball physics
+├── SwordServer.lua      # Sword/parry system
+├── PlayerSetup.lua      # Player configuration
+└── DashServer.lua       # Dash mechanics
 
 StarterCharacterScripts/
-└── LocalScript.lua    # Player input handler
+├── BallClient.lua       # Client ball prediction
+├── InputClient.lua      # Parry input handler
+└── DashClient.lua       # Dash input handler
 ```
 
 ## Note

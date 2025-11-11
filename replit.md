@@ -4,7 +4,13 @@
 Professional Roblox ball parry game with client-side prediction, server-authoritative physics, and modular architecture.
 
 ## Recent Changes (Latest Update)
-**Complete code overhaul** - Rewrote entire codebase with professional architecture:
+**Player movement enhancements**:
+- ✅ Set default walkspeed to 21 (faster movement)
+- ✅ Added dash mechanic (Q key) with 5 second cooldown
+- ✅ Dash moves player in camera look direction
+- ✅ Dash animation support (optional)
+
+**Previous: Complete code overhaul**:
 - ✅ Added client-side ball prediction for smooth gameplay
 - ✅ Implemented modular design with shared physics engine
 - ✅ Server remains authoritative with 60Hz update rate
@@ -22,12 +28,15 @@ Professional Roblox ball parry game with client-side prediction, server-authorit
 **ServerScriptService/** (Server)
 - `BallServer.lua` - Authoritative ball physics
 - `SwordServer.lua` - Sword equipment & parry system
+- `PlayerSetup.lua` - Player walkspeed configuration
+- `DashServer.lua` - Dash mechanic (server-side)
 - ~~`BallSever.lua`~~ - Deprecated
 - ~~`swap.lua`~~ - Deprecated
 
 **StarterCharacterScripts/** (Client)
 - `BallClient.lua` - Client-side prediction
 - `InputClient.lua` - User input handling
+- `DashClient.lua` - Dash input (Q key)
 - ~~`LocalScript.lua`~~ - Deprecated
 
 ## Key Features

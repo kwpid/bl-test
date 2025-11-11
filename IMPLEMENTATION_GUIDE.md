@@ -54,14 +54,18 @@ The codebase has been completely overhauled with a professional, modular archite
    - Create `BallConfig` ModuleScript
    - Create `BallPhysics` ModuleScript
    - Ensure `Swords` folder exists with `DefaultSword` model
+   - (Optional) Create `DashAnimation` Animation for dash animation
 
    **ServerScriptService:**
    - Add `BallServer` Script
    - Add `SwordServer` Script
+   - Add `PlayerSetup` Script
+   - Add `DashServer` Script
 
    **StarterPlayer > StarterCharacterScripts:**
    - Add `BallClient` LocalScript
    - Add `InputClient` LocalScript
+   - Add `DashClient` LocalScript
 
 3. **Required workspace objects** (same as before):
    - `Ball` part in Workspace
@@ -85,6 +89,17 @@ Parry = {
     RANGE = 10,                -- Parry distance
     COOLDOWN = 0.5,            -- Input cooldown
     TIMEOUT = 5,               -- Parry window timeout
+}
+
+Player = {
+    WALKSPEED = 21,            -- Default player walkspeed
+}
+
+Dash = {
+    DISTANCE = 25,             -- Dash distance in studs
+    DURATION = 0.3,            -- Dash duration in seconds
+    COOLDOWN = 5,              -- Cooldown between dashes
+    KEYBIND = Enum.KeyCode.Q,  -- Key to press for dash
 }
 
 Network = {
