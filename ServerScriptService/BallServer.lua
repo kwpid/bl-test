@@ -7,12 +7,13 @@ local Config = require(ReplicatedStorage.BallConfig)
 
 local RemoteEvents = {
         ballUpdate = ReplicatedStorage:FindFirstChild("BallUpdateEvent") or Instance.new("RemoteEvent"),
-        ballHit = ReplicatedStorage:FindFirstChild("BallHitEvent") or Instance.new("RemoteEvent"),
 }
 RemoteEvents.ballUpdate.Name = "BallUpdateEvent"
 RemoteEvents.ballUpdate.Parent = ReplicatedStorage
-RemoteEvents.ballHit.Name = "BallHitEvent"
-RemoteEvents.ballHit.Parent = ReplicatedStorage
+
+local ServerEvents = {
+        ballHit = ReplicatedStorage:WaitForChild("ServerBallHit"),
+}
 
 local ball = workspace:WaitForChild("Ball")
 ball.Anchored = true
@@ -100,7 +101,7 @@ end)
 
 local lastHitTime = 0
 
-RemoteEvents.ballHit.OnServerEvent:Connect(function(player, cameraDirection)
+ServerEvents.ballHit.Event:Connect(function(player, cameraDirection)
         local currentTime = tick()
         if currentTime - lastHitTime < Config.Parry.MIN_HIT_INTERVAL then
                 return

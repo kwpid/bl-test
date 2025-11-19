@@ -1,11 +1,8 @@
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local Config = require(ReplicatedStorage:WaitForChild("BallConfig"))
 
 local function onCharacterAdded(character)
         local humanoid = character:WaitForChild("Humanoid")
-        humanoid.WalkSpeed = Config.Player.WALKSPEED
+        humanoid.WalkSpeed = 21
 end
 
 local function onPlayerAdded(player)
@@ -22,4 +19,4 @@ for _, player in pairs(Players:GetPlayers()) do
         onPlayerAdded(player)
 end
 
-print("Player setup initialized - WalkSpeed:", Config.Player.WALKSPEED)
+print("Player setup initialized - WalkSpeed: 21")

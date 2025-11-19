@@ -12,10 +12,15 @@ local DUMMY_ARM_ATTACHMENT = DUMMY:WaitForChild("Right Arm"):WaitForChild("Sword
 
 local RemoteEvents = {
         swing = ReplicatedStorage:FindFirstChild("SwingEvent") or Instance.new("RemoteEvent"),
-        ballHit = ReplicatedStorage:WaitForChild("BallHitEvent"),
 }
 RemoteEvents.swing.Name = "SwingEvent"
 RemoteEvents.swing.Parent = ReplicatedStorage
+
+local ServerEvents = {
+        ballHit = ReplicatedStorage:FindFirstChild("ServerBallHit") or Instance.new("BindableEvent"),
+}
+ServerEvents.ballHit.Name = "ServerBallHit"
+ServerEvents.ballHit.Parent = ReplicatedStorage
 
 local playerData = {}
 local ballHitImmunity = {}
@@ -121,7 +126,7 @@ local function createParryWindow(player, character, animator, animations, weld, 
                         parryTrack:Play()
                         
                         task.wait(0.05)
-                        RemoteEvents.ballHit:FireClient(player, parryWindow.cameraDirection)
+                        ServerEvents.ballHit:Fire(player, parryWindow.cameraDirection)
                         
                         parryTrack.Stopped:Connect(function()
                                 weld.Part0 = attachments.torso

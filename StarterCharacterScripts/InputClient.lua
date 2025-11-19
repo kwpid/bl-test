@@ -3,7 +3,6 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local swingEvent = ReplicatedStorage:WaitForChild("SwingEvent")
-local ballHitEvent = ReplicatedStorage:WaitForChild("BallHitEvent")
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
@@ -21,10 +20,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                         isOnCooldown = false
                 end)
         end
-end)
-
-ballHitEvent.OnClientEvent:Connect(function(storedCameraDirection)
-        ballHitEvent:FireServer(storedCameraDirection)
 end)
 
 print("Input client initialized")

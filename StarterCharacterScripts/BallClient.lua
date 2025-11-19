@@ -18,8 +18,8 @@ ball.Transparency = 1
 
 local trail = Instance.new("Trail")
 trail.Parent = clientBall
-trail.Lifetime = Config.Visual.TRAIL_LIFETIME
-trail.MinLength = Config.Visual.TRAIL_MIN_LENGTH
+trail.Lifetime = 0.5
+trail.MinLength = 0.1
 trail.FaceCamera = true
 trail.WidthScale = NumberSequence.new(1, 0)
 trail.Transparency = NumberSequence.new(0.3, 1)
@@ -100,7 +100,7 @@ RunService.Heartbeat:Connect(function(dt)
         
         local speedPercent = clientState:getSpeedPercent()
         trail.Color = ColorSequence.new(interpolateColor(speedPercent))
-        trail.Enabled = clientState:getSpeed() > Config.Visual.MIN_TRAIL_SPEED
+        trail.Enabled = clientState:getSpeed() > 5
 end)
 
 print("Ball client initialized")
