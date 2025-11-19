@@ -23,9 +23,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 ballHitEvent.OnClientEvent:Connect(function()
-        print("InputClient received ballHit event from server")
         local cameraDirection = camera.CFrame.LookVector
-        print("Sending camera direction to server:", cameraDirection)
         ballHitEvent:FireServer(cameraDirection)
 end)
 

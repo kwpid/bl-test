@@ -42,10 +42,7 @@ raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 raycastParams.FilterDescendantsInstances = {ball, clientBall, player.Character}
 
 local function interpolateColor(percent)
-        local r = 1 - percent
-        local g = 1 - (percent * 0.5)
-        local b = 1
-        return Color3.new(r, g, b)
+        return Color3.new(1, 1, 1):Lerp(Color3.new(0.7, 0.6, 1), percent)
 end
 
 ballUpdateEvent.OnClientEvent:Connect(function(serverState)

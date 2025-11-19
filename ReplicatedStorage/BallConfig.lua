@@ -16,8 +16,6 @@ BallConfig.Visual = {
         TRAIL_LIFETIME = 0.5,
         TRAIL_MIN_LENGTH = 0.1,
         MIN_TRAIL_SPEED = 5,
-        COLOR_SLOW = Color3.new(1, 1, 1),
-        COLOR_FAST = Color3.new(0, 0.5, 1),
 }
 
 BallConfig.Parry = {
