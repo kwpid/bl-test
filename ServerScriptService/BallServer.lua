@@ -7,15 +7,12 @@ local Config = require(ReplicatedStorage.BallConfig)
 
 local RemoteEvents = {
         ballUpdate = ReplicatedStorage:FindFirstChild("BallUpdateEvent") or Instance.new("RemoteEvent"),
+        ballHit = ReplicatedStorage:FindFirstChild("BallHitEvent") or Instance.new("RemoteEvent"),
 }
 RemoteEvents.ballUpdate.Name = "BallUpdateEvent"
 RemoteEvents.ballUpdate.Parent = ReplicatedStorage
-
-local BindableEvents = {
-        ballHit = ReplicatedStorage:FindFirstChild("BallHitBindable") or Instance.new("BindableEvent"),
-}
-BindableEvents.ballHit.Name = "BallHitBindable"
-BindableEvents.ballHit.Parent = ReplicatedStorage
+RemoteEvents.ballHit.Name = "BallHitEvent"
+RemoteEvents.ballHit.Parent = ReplicatedStorage
 
 local ball = workspace:WaitForChild("Ball")
 ball.Anchored = true
@@ -103,7 +100,7 @@ end)
 
 local lastHitTime = 0
 
-BindableEvents.ballHit.Event:Connect(function(player, cameraDirection)
+RemoteEvents.ballHit.OnServerEvent:Connect(function(player, cameraDirection)
         local character = player.Character
         if not character then return end
 
