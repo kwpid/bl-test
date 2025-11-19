@@ -14,6 +14,7 @@ local RemoteEventsFolder = ReplicatedStorage:WaitForChild(Config.Paths.REMOTE_EV
 
 local RemoteEvents = {
         swing = RemoteEventsFolder:WaitForChild("SwingEvent"),
+        deviceType = RemoteEventsFolder:WaitForChild("DeviceTypeEvent"),
 }
 
 local ServerEvents = {
@@ -22,6 +23,12 @@ local ServerEvents = {
 
 local playerData = {}
 local ballHitImmunity = {}
+
+local VALID_DEVICE_TYPES = {
+        ["Mobile"] = true,
+        ["Desktop"] = true,
+        ["Console"] = true,
+}
 
 local function cloneAttachment(parent, template, name)
         if parent:FindFirstChild(name) then return end
@@ -69,12 +76,20 @@ local function setBallHitImmunity(userId)
 end
 
 local function createParryWindow(player, character, animator, animations, weld, attachments, cameraDirection)
+        local data = playerData[player.UserId]
+        local parryRange = Config.Parry.RANGE
+        
+        if data and data.deviceType == "Mobile" then
+                parryRange = parryRange * Config.Parry.MOBILE_RANGE_MULTIPLIER
+        end
+        
         local parryWindow = {
                 active = true,
                 hitBall = false,
                 connection = nil,
                 startTime = tick(),
                 cameraDirection = cameraDirection,
+                parryRange = parryRange,
         }
         
         local failTrack = animator:LoadAnimation(animations.fail)
@@ -108,7 +123,7 @@ local function createParryWindow(player, character, animator, animations, weld, 
                 
                 local distance = (hrp.Position - ball.Position).Magnitude
                 
-                if distance <= Config.Parry.RANGE then
+                if distance <= parryWindow.parryRange then
                         parryWindow.hitBall = true
                         parryWindow.active = false
                         
@@ -156,6 +171,11 @@ end
 
 local function onSwing(player, cameraDirection)
         if not cameraDirection or typeof(cameraDirection) ~= "Vector3" then return end
+        
+        if cameraDirection.Magnitude < 0.001 then
+                warn("Invalid camera direction from player: " .. player.Name)
+                return
+        end
         
         local character = player.Character
         if not character then return end
@@ -220,7 +240,25 @@ local function onSwing(player, cameraDirection)
         createParryWindow(player, character, animator, animations, weld, attachments, cameraDirection)
 end
 
+local function onDeviceType(player, deviceType)
+        if not VALID_DEVICE_TYPES[deviceType] then
+                warn("Invalid device type from player: " .. player.Name)
+                return
+        end
+        
+        local data = playerData[player.UserId]
+        if data then
+                if data.deviceType then
+                        warn("Player " .. player.Name .. " attempted to change device type")
+                        return
+                end
+                data.deviceType = deviceType
+                print("Player " .. player.Name .. " device type set to: " .. deviceType)
+        end
+end
+
 RemoteEvents.swing.OnServerEvent:Connect(onSwing)
+RemoteEvents.deviceType.OnServerEvent:Connect(onDeviceType)
 
 local function onCharacterAdded(character)
         local swordModel = SWORD_FOLDER:FindFirstChild(DEFAULT_SWORD_NAME)
@@ -233,6 +271,7 @@ end
 local function onPlayerAdded(player)
         playerData[player.UserId] = {
                 cooldown = false,
+                deviceType = nil,
         }
         
         player.CharacterAdded:Connect(onCharacterAdded)

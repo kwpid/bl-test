@@ -13,6 +13,7 @@ local ball = workspace:WaitForChild("Ball")
 local clientBall = ball:Clone()
 clientBall.Name = "ClientBall"
 clientBall.Transparency = 0
+clientBall.CanCollide = false
 clientBall.Parent = workspace
 
 ball.Transparency = 1

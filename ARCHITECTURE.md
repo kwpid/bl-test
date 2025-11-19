@@ -112,7 +112,8 @@ DECELERATION = 0.998         -- Speed loss per frame
 **Required Events:**
 1. **BallUpdateEvent** (RemoteEvent) - Server → All Clients (ball state)
 2. **SwingEvent** (RemoteEvent) - Client → Server (parry input)
-3. **ServerBallHit** (BindableEvent) - Server internal (SwordServer → BallServer)
+3. **DeviceTypeEvent** (RemoteEvent) - Client → Server (device type detection, sent once on join)
+4. **ServerBallHit** (BindableEvent) - Server internal (SwordServer → BallServer)
 
 ### Data Flow
 ```
