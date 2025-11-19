@@ -113,6 +113,11 @@ ServerEvents.ballHit.Event:Connect(function(player, cameraDirection)
         if not cameraDirection or typeof(cameraDirection) ~= "Vector3" then
                 return
         end
+        
+        if cameraDirection.Magnitude < 0.001 then
+                warn("Invalid camera direction from player: " .. player.Name)
+                return
+        end
 
         lastHitTime = currentTime
 

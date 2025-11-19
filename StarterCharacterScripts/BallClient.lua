@@ -40,7 +40,21 @@ local lastServerUpdate = tick()
 
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-raycastParams.FilterDescendantsInstances = {ball, clientBall, player.Character}
+
+local function updateRaycastFilter()
+        local filterList = {ball, clientBall}
+        if player.Character then
+                table.insert(filterList, player.Character)
+        end
+        raycastParams.FilterDescendantsInstances = filterList
+end
+
+updateRaycastFilter()
+
+player.CharacterAdded:Connect(function()
+        task.wait(0.1)
+        updateRaycastFilter()
+end)
 
 local function interpolateColor(percent)
         return Color3.new(1, 1, 1):Lerp(Color3.new(0.7, 0.6, 1), percent)

@@ -72,9 +72,7 @@ function BallPhysics:update(dt, raycastFunc, groundHeight)
                         
                         local shouldBounce = false
                         
-                        if currentSpeed >= Config.Physics.MIN_BOUNCE_SPEED and impactAngle >= Config.Physics.MIN_BOUNCE_ANGLE then
-                                shouldBounce = true
-                        elseif currentSpeed < Config.Physics.MIN_BOUNCE_SPEED and impactAngle >= Config.Physics.MIN_BOUNCE_ANGLE then
+                        if impactAngle >= Config.Physics.MIN_BOUNCE_ANGLE then
                                 shouldBounce = true
                         end
                         

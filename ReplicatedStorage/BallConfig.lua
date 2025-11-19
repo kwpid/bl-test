@@ -16,7 +16,6 @@ BallConfig.Physics = {
         GRAVITY = 0.15,
         GRAVITY_THRESHOLD = 30,
         
-        MIN_BOUNCE_SPEED = 15,
         MIN_BOUNCE_ANGLE = 45,
 }
 
