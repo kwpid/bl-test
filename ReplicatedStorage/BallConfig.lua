@@ -14,6 +14,10 @@ BallConfig.Physics = {
         BOUNCE_ENERGY_LOSS = 0.8,
         GRAVITY = 0.15,
         GRAVITY_THRESHOLD = 30,
+        
+        MIN_BOUNCE_SPEED = 15,
+        MIN_BOUNCE_ANGLE = 45,
+        GROUND_NORMAL_THRESHOLD = 0.7,
 }
 
 BallConfig.Parry = {

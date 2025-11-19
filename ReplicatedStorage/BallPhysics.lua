@@ -67,13 +67,33 @@ function BallPhysics:update(dt, raycastFunc)
                         
                         if collision then
                                 local normal = collision.Normal
-                                local reflectedVelocity = self.velocity - 2 * self.velocity:Dot(normal) * normal
-                                self.velocity = reflectedVelocity * Config.Physics.BOUNCE_ENERGY_LOSS
-                                self.position = collision.Position + (normal * 1.2)
+                                local isGround = normal.Y > Config.Physics.GROUND_NORMAL_THRESHOLD
+                                local currentSpeed = self.velocity.Magnitude
                                 
-                                if self.velocity.Magnitude < 2 then
-                                        self.velocity = Vector3.new(0, 0, 0)
-                                        self.isMoving = false
+                                local shouldBounce = true
+                                
+                                if isGround then
+                                        if currentSpeed < Config.Physics.MIN_BOUNCE_SPEED then
+                                                local velocityDirection = self.velocity.Unit
+                                                local impactAngle = math.deg(math.asin(math.abs(velocityDirection.Y)))
+                                                
+                                                if impactAngle < Config.Physics.MIN_BOUNCE_ANGLE then
+                                                        shouldBounce = false
+                                                        self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z) * 0.5
+                                                        self.position = collision.Position + (normal * 1.2)
+                                                end
+                                        end
+                                end
+                                
+                                if shouldBounce then
+                                        local reflectedVelocity = self.velocity - 2 * self.velocity:Dot(normal) * normal
+                                        self.velocity = reflectedVelocity * Config.Physics.BOUNCE_ENERGY_LOSS
+                                        self.position = collision.Position + (normal * 1.2)
+                                        
+                                        if self.velocity.Magnitude < 2 and not isGround then
+                                                self.velocity = Vector3.new(0, 0, 0)
+                                                self.isMoving = false
+                                        end
                                 end
                                 break
                         else
