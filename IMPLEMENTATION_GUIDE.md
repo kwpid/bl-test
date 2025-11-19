@@ -92,6 +92,8 @@ Parry = {
     RANGE = 10,                -- Parry distance
     COOLDOWN = 0.5,            -- Input cooldown
     TIMEOUT = 5,               -- Parry window timeout
+    MOBILE_RANGE_MULTIPLIER = 1.3,   -- Mobile hitbox range multiplier
+    CONSOLE_RANGE_MULTIPLIER = 1.3,  -- Console hitbox range multiplier
 }
 
 Player = {
@@ -129,6 +131,26 @@ Network = {
 5. `InputClient.lua` handles mouse input with client-side cooldown
 6. `DashClient.lua` detects dash type (normal vs ball-seeking) and sends to server
 
+### Cross-Platform Support
+The game automatically detects device type and adjusts accordingly:
+
+**PC (Desktop)**:
+- Mouse click to parry
+- Standard hitbox range (10 studs)
+- Full keyboard controls
+
+**Mobile**:
+- Touch input to parry
+- Increased hitbox range (13 studs with 1.3x multiplier)
+- Touch-optimized controls
+
+**Console (Xbox/PlayStation)**:
+- Gamepad buttons R1/R2/A to parry
+- Increased hitbox range (13 studs with 1.3x multiplier)
+- Full gamepad support
+
+Device type is detected on client join and sent to server once. The server uses this to apply appropriate range multipliers. Multipliers are configurable in `BallConfig.lua`.
+
 ### Dash System
 **Type 1 (Normal Dash)**:
 - Player dashes in camera direction
@@ -152,6 +174,7 @@ Network = {
 
 ## Testing Checklist
 
+- [ ] Ball spawns at ground level + float height (not mid-air)
 - [ ] Ball spawns and floats correctly
 - [ ] Ball responds to parries with proper direction
 - [ ] Speed increases with each hit

@@ -5,6 +5,7 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 ## Features
 
 ### Ball System
+- **Smart Spawn**: Ball automatically spawns at ground level + float height (no mid-air spawning)
 - **Physics Engine**: Custom ball physics with floating, collision detection, and realistic bouncing
 - **Speed Mechanics**: Progressive speed increase with each successful hit (20 → 150 studs/sec)
 - **Reduced Deceleration**: Ball maintains speed longer (0.998 deceleration rate)
@@ -15,6 +16,10 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 
 ### Combat System
 - **Sword Parrying**: Timing-based parrying mechanic with 10-stud range
+- **Cross-Platform Support**: Full support for PC, Mobile, and Console
+  - **Mobile**: Touch input + increased hitbox range (configurable multiplier)
+  - **Console**: Gamepad buttons (R1/R2/A) + increased hitbox range (configurable multiplier)
+  - **PC**: Mouse click input with standard range
 - **Animations**: Two-state animation system (miss/success)
 - **Cooldown System**: Prevents spam clicking
 - **Auto-Equipment**: Swords automatically attach to player characters

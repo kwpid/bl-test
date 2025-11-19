@@ -4,7 +4,14 @@
 Professional Roblox ball parry game with client-side prediction, server-authoritative physics, and modular architecture.
 
 ## Recent Changes (Latest Update)
-**Dash and ball physics improvements**:
+**Cross-platform support and ball spawn fix**:
+- ✅ Enhanced mobile/console support with configurable hitbox multipliers
+- ✅ Fixed ball spawning mid-air: ball now spawns at ground level + float height
+- ✅ Console range multiplier (1.3x) added to config alongside mobile multiplier
+- ✅ Ball initialization properly calculates ground height on server start
+- ✅ Input support: Mouse (PC), Touch (Mobile), Gamepad R1/R2/A (Console)
+
+**Previous: Dash and ball physics improvements**:
 - ✅ Fixed dash falling issue: gravity completely disabled during dash (PlatformStand)
 - ✅ Type 2 dash now dashes TO the ball in full 3D (not height-locked)
 - ✅ Increased ball-facing angle to 70° (more lenient detection)
