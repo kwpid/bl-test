@@ -32,6 +32,10 @@ BallConfig.Network = {
         INTERPOLATION_DELAY = 0.1,
 }
 
+BallConfig.Goal = {
+        RESET_DELAY = 3,
+}
+
 BallConfig.Player = {
         WALKSPEED = 21,
 }
