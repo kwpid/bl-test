@@ -36,13 +36,4 @@ BallConfig.Player = {
         WALKSPEED = 21,
 }
 
-BallConfig.Dash = {
-        DISTANCE = 15,
-        DURATION = 0.2,
-        COOLDOWN = 3,
-        KEYBIND = Enum.KeyCode.LeftShift,
-        BALL_FACING_ANGLE = 70,
-        BALL_FACING_MAX_DISTANCE = 100,
-}
-
 return BallConfig

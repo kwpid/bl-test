@@ -100,7 +100,7 @@ end)
 
 local lastHitTime = 0
 
-RemoteEvents.ballHit.OnServerEvent:Connect(function(player, cameraDirection, swingDirection)
+RemoteEvents.ballHit.OnServerEvent:Connect(function(player, cameraDirection)
         local currentTime = tick()
         if currentTime - lastHitTime < Config.Parry.MIN_HIT_INTERVAL then
                 return
@@ -109,17 +109,10 @@ RemoteEvents.ballHit.OnServerEvent:Connect(function(player, cameraDirection, swi
         if not cameraDirection or typeof(cameraDirection) ~= "Vector3" then
                 return
         end
-        
-        if not swingDirection or typeof(swingDirection) ~= "Vector3" then
-                return
-        end
 
         lastHitTime = currentTime
 
-        local clampedCamera = Vector3.new(cameraDirection.X, math.clamp(cameraDirection.Y, -0.5, 0.5), cameraDirection.Z).Unit
-        local finalDirection = (swingDirection * 0.7 + clampedCamera * 0.3).Unit
-
-        ballState:applyHit(finalDirection)
+        ballState:applyHit(cameraDirection)
 
         RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
 end)

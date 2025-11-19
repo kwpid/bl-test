@@ -14,7 +14,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
                 isOnCooldown = true
-                swingEvent:FireServer()
+                local cameraDirection = camera.CFrame.LookVector
+                swingEvent:FireServer(cameraDirection)
                 
                 task.delay(0.5, function()
                         isOnCooldown = false
@@ -22,9 +23,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         end
 end)
 
-ballHitEvent.OnClientEvent:Connect(function(swingDirection)
-        local cameraDirection = camera.CFrame.LookVector
-        ballHitEvent:FireServer(cameraDirection, swingDirection)
+ballHitEvent.OnClientEvent:Connect(function(storedCameraDirection)
+        ballHitEvent:FireServer(storedCameraDirection)
 end)
 
 print("Input client initialized")

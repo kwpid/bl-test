@@ -65,12 +65,13 @@ local function setBallHitImmunity(userId)
         ballHitImmunity[userId] = tick()
 end
 
-local function createParryWindow(player, character, animator, animations, weld, attachments)
+local function createParryWindow(player, character, animator, animations, weld, attachments, cameraDirection)
         local parryWindow = {
                 active = true,
                 hitBall = false,
                 connection = nil,
                 startTime = tick(),
+                cameraDirection = cameraDirection,
         }
         
         local failTrack = animator:LoadAnimation(animations.fail)
@@ -120,8 +121,7 @@ local function createParryWindow(player, character, animator, animations, weld, 
                         parryTrack:Play()
                         
                         task.wait(0.05)
-                        local swingDirection = (ball.Position - hrp.Position).Unit
-                        RemoteEvents.ballHit:FireClient(player, swingDirection)
+                        RemoteEvents.ballHit:FireClient(player, parryWindow.cameraDirection)
                         
                         parryTrack.Stopped:Connect(function()
                                 weld.Part0 = attachments.torso
@@ -151,7 +151,9 @@ local function createParryWindow(player, character, animator, animations, weld, 
         return parryWindow
 end
 
-local function onSwing(player)
+local function onSwing(player, cameraDirection)
+        if not cameraDirection or typeof(cameraDirection) ~= "Vector3" then return end
+        
         local character = player.Character
         if not character then return end
         
@@ -212,7 +214,7 @@ local function onSwing(player)
                 return
         end
         
-        createParryWindow(player, character, animator, animations, weld, attachments)
+        createParryWindow(player, character, animator, animations, weld, attachments, cameraDirection)
 end
 
 RemoteEvents.swing.OnServerEvent:Connect(onSwing)
