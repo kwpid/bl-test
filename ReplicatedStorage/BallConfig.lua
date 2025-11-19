@@ -5,10 +5,11 @@ BallConfig.Physics = {
         BASE_SPEED = 20,
         SPEED_INCREMENT = 15,
         MAX_SPEED = 150,
-        DECELERATION = 0.994,
+        DECELERATION = 0.998,
         MIN_SPEED = 1,
         BOUNCE_ENERGY_LOSS = 0.8,
-        GRAVITY = 0,
+        GRAVITY = 0.15,
+        GRAVITY_THRESHOLD = 30,
 }
 
 BallConfig.Visual = {
@@ -42,7 +43,7 @@ BallConfig.Dash = {
         DURATION = 0.2,
         COOLDOWN = 3,
         KEYBIND = Enum.KeyCode.LeftShift,
-        BALL_FACING_ANGLE = 45, -- Max angle (degrees) to consider "facing the ball"
+        BALL_FACING_ANGLE = 70, -- Max angle (degrees) to consider "facing the ball"
         BALL_FACING_MAX_DISTANCE = 100, -- Max distance to dash towards ball
 }
 
