@@ -22,9 +22,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         end
 end)
 
-ballHitEvent.OnClientEvent:Connect(function()
+ballHitEvent.OnClientEvent:Connect(function(swingDirection)
         local cameraDirection = camera.CFrame.LookVector
-        ballHitEvent:FireServer(cameraDirection)
+        ballHitEvent:FireServer(cameraDirection, swingDirection)
 end)
 
 print("Input client initialized")

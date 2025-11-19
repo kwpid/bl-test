@@ -100,32 +100,26 @@ end)
 
 local lastHitTime = 0
 
-RemoteEvents.ballHit.OnServerEvent:Connect(function(player, cameraDirection)
-        local character = player.Character
-        if not character then return end
-
-        local hrp = character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
+RemoteEvents.ballHit.OnServerEvent:Connect(function(player, cameraDirection, swingDirection)
         local currentTime = tick()
         if currentTime - lastHitTime < Config.Parry.MIN_HIT_INTERVAL then
                 return
         end
 
-        local distance = (hrp.Position - ballState.position).Magnitude
-        if distance > Config.Parry.RANGE then
-                warn(string.format("Ball too far: %.1f studs (max: %d)", distance, Config.Parry.RANGE))
+        if not cameraDirection or typeof(cameraDirection) ~= "Vector3" then
                 return
         end
-
-        if not cameraDirection or typeof(cameraDirection) ~= "Vector3" then
-                warn("Invalid camera direction")
+        
+        if not swingDirection or typeof(swingDirection) ~= "Vector3" then
                 return
         end
 
         lastHitTime = currentTime
 
-        ballState:applyHit(cameraDirection)
+        local clampedCamera = Vector3.new(cameraDirection.X, math.clamp(cameraDirection.Y, -0.5, 0.5), cameraDirection.Z).Unit
+        local finalDirection = (swingDirection * 0.7 + clampedCamera * 0.3).Unit
+
+        ballState:applyHit(finalDirection)
 
         RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
 end)

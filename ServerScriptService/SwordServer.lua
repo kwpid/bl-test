@@ -120,7 +120,8 @@ local function createParryWindow(player, character, animator, animations, weld, 
                         parryTrack:Play()
                         
                         task.wait(0.05)
-                        RemoteEvents.ballHit:FireClient(player)
+                        local swingDirection = (ball.Position - hrp.Position).Unit
+                        RemoteEvents.ballHit:FireClient(player, swingDirection)
                         
                         parryTrack.Stopped:Connect(function()
                                 weld.Part0 = attachments.torso

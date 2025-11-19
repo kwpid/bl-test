@@ -69,7 +69,12 @@ function BallPhysics:update(dt, raycastFunc)
                                 local normal = collision.Normal
                                 local reflectedVelocity = self.velocity - 2 * self.velocity:Dot(normal) * normal
                                 self.velocity = reflectedVelocity * Config.Physics.BOUNCE_ENERGY_LOSS
-                                self.position = collision.Position + (normal * 0.6)
+                                self.position = collision.Position + (normal * 1.2)
+                                
+                                if self.velocity.Magnitude < 2 then
+                                        self.velocity = Vector3.new(0, 0, 0)
+                                        self.isMoving = false
+                                end
                                 break
                         else
                                 self.position = nextPosition
