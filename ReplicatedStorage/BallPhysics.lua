@@ -63,20 +63,20 @@ function BallPhysics:update(dt, raycastFunc, groundHeight)
                 local nextPosition = self.position + stepVector
                 
                 local bounceHeight = groundHeight + Config.Physics.FLOAT_HEIGHT
-                local crossedFloorPlane = self.position.Y > bounceHeight and nextPosition.Y <= bounceHeight and self.velocity.Y < 0
+                local crossedFloorPlane = self.position.Y > bounceHeight and nextPosition.Y <= bounceHeight and self.velocity.Y < -1
                 
                 if crossedFloorPlane then
                         local currentSpeed = self.velocity.Magnitude
-                        local shouldBounce = true
+                        local shouldBounce = false
                         
-                        if currentSpeed < Config.Physics.MIN_BOUNCE_SPEED then
+                        if currentSpeed >= Config.Physics.MIN_BOUNCE_SPEED then
+                                shouldBounce = true
+                        else
                                 local velocityDirection = self.velocity.Unit
                                 local impactAngle = math.deg(math.asin(math.abs(velocityDirection.Y)))
                                 
-                                if impactAngle < Config.Physics.MIN_BOUNCE_ANGLE then
-                                        shouldBounce = false
-                                        self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z) * 0.5
-                                        self.position = Vector3.new(nextPosition.X, bounceHeight, nextPosition.Z)
+                                if impactAngle >= Config.Physics.MIN_BOUNCE_ANGLE then
+                                        shouldBounce = true
                                 end
                         end
                         
@@ -84,6 +84,9 @@ function BallPhysics:update(dt, raycastFunc, groundHeight)
                                 local normal = Vector3.new(0, 1, 0)
                                 local reflectedVelocity = self.velocity - 2 * self.velocity:Dot(normal) * normal
                                 self.velocity = reflectedVelocity * Config.Physics.BOUNCE_ENERGY_LOSS
+                                self.position = Vector3.new(nextPosition.X, bounceHeight, nextPosition.Z)
+                        else
+                                self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z) * 0.5
                                 self.position = Vector3.new(nextPosition.X, bounceHeight, nextPosition.Z)
                         end
                         break
