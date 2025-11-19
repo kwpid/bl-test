@@ -129,12 +129,10 @@ RemoteEvents.ballHit.OnServerEvent:Connect(function(player, cameraDirection)
         
         local distance = (hrp.Position - ballState.position).Magnitude
         if distance > Config.Parry.RANGE then 
-                warn(string.format("Ball too far: %.1f studs (max: %d)", distance, Config.Parry.RANGE))
                 return 
         end
         
         if not cameraDirection or typeof(cameraDirection) ~= "Vector3" then
-                warn("Invalid camera direction")
                 return
         end
         
@@ -143,9 +141,4 @@ RemoteEvents.ballHit.OnServerEvent:Connect(function(player, cameraDirection)
         local speed = ballState:applyHit(cameraDirection)
         
         RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
-        
-        print(string.format("✓ Ball hit by %s | Hit #%d | Speed: %.1f | Distance: %.1f", 
-                player.Name, ballState.hitCount, speed, distance))
 end)
-
-print("Ball server initialized")

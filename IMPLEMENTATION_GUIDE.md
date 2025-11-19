@@ -7,6 +7,7 @@ The codebase has been completely overhauled with a professional, modular archite
 ### Module Structure
 
 **ReplicatedStorage/** (Shared modules)
+- `AssetManager.lua` - Animation and asset ID references
 - `BallConfig.lua` - Centralized configuration constants
 - `BallPhysics.lua` - Shared physics engine (client + server)
 
@@ -51,10 +52,11 @@ The codebase has been completely overhauled with a professional, modular archite
 2. **Place new files** in Roblox Studio:
    
    **ReplicatedStorage:**
+   - Create `AssetManager` ModuleScript
    - Create `BallConfig` ModuleScript
    - Create `BallPhysics` ModuleScript
    - Ensure `Swords` folder exists with `DefaultSword` model
-   - (Optional) Create `DashAnimation` Animation for dash animation
+   - **REQUIRED**: Upload dash animation to Roblox and update `AssetManager.Dash` with the asset ID
 
    **ServerScriptService:**
    - Add `BallServer` Script
@@ -100,6 +102,8 @@ Dash = {
     DURATION = 0.2,            -- Dash duration in seconds
     COOLDOWN = 3,              -- Cooldown between dashes
     KEYBIND = Enum.KeyCode.LeftShift,  -- Key to press for dash
+    BALL_FACING_ANGLE = 45,    -- Angle threshold for ball-seeking dash
+    BALL_FACING_MAX_DISTANCE = 100,  -- Max distance to activate ball-seeking
 }
 
 Network = {
@@ -122,6 +126,20 @@ Network = {
 3. Smoothly interpolates between prediction and server state
 4. Renders visual effects (trail, colors)
 5. `InputClient.lua` handles mouse input with client-side cooldown
+6. `DashClient.lua` detects dash type (normal vs ball-seeking) and sends to server
+
+### Dash System
+**Type 1 (Normal Dash)**:
+- Player dashes in camera direction
+- Height is locked to starting Y position
+- Works off ledges and in air
+- Player maintains height until dash completes
+
+**Type 2 (Ball-Seeking Dash)**:
+- Activates when player faces ball (within 45° angle)
+- Player dashes towards ball position
+- Still respects max dash distance
+- Height is locked to starting Y position
 
 ### Visual Improvements
 - Server ball is hidden (transparency = 1)

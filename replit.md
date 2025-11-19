@@ -4,7 +4,15 @@
 Professional Roblox ball parry game with client-side prediction, server-authoritative physics, and modular architecture.
 
 ## Recent Changes (Latest Update)
-**Hit detection improvements**:
+**Dash system overhaul**:
+- ✅ Removed debug logs from BallServer
+- ✅ Added AssetManager module for animation references
+- ✅ Implemented Type 1 dash: Height-locked dashing (maintains Y position)
+- ✅ Implemented Type 2 dash: Ball-seeking dash when facing ball
+- ✅ Cleaner, more modular dash code
+- ✅ Animation support for dash mechanic
+
+**Previous: Hit detection improvements**:
 - ✅ Fixed double-hit bug when ball bounces off walls
 - ✅ Added 0.5s immunity after successful hit
 - ✅ Improved hit validation and reliability
@@ -27,21 +35,22 @@ Professional Roblox ball parry game with client-side prediction, server-authorit
 
 ### Modular Structure
 **ReplicatedStorage/** (Shared)
+- `AssetManager.lua` - Animation and asset IDs
 - `BallConfig.lua` - Configuration constants
 - `BallPhysics.lua` - Physics engine (client + server)
 
 **ServerScriptService/** (Server)
-- `BallServer.lua` - Authoritative ball physics
+- `BallServer.lua` - Authoritative ball physics (no debug logs)
 - `SwordServer.lua` - Sword equipment & parry system
 - `PlayerSetup.lua` - Player walkspeed configuration
-- `DashServer.lua` - Dash mechanic (server-side)
+- `DashServer.lua` - Height-locked & ball-seeking dash
 - ~~`BallSever.lua`~~ - Deprecated
 - ~~`swap.lua`~~ - Deprecated
 
 **StarterCharacterScripts/** (Client)
 - `BallClient.lua` - Client-side prediction
 - `InputClient.lua` - User input handling
-- `DashClient.lua` - Dash input (Shift key)
+- `DashClient.lua` - Dash type detection (normal vs ball-seeking)
 - ~~`LocalScript.lua`~~ - Deprecated
 
 ## Key Features

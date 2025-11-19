@@ -42,6 +42,8 @@ BallConfig.Dash = {
         DURATION = 0.2,
         COOLDOWN = 3,
         KEYBIND = Enum.KeyCode.LeftShift,
+        BALL_FACING_ANGLE = 45, -- Max angle (degrees) to consider "facing the ball"
+        BALL_FACING_MAX_DISTANCE = 100, -- Max distance to dash towards ball
 }
 
 return BallConfig

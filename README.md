@@ -19,10 +19,13 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 
 ### Movement System
 - **Enhanced Speed**: Walkspeed set to 21 (faster than default)
-- **Dash Mechanic**: Press Shift to dash in camera direction (full 3D movement)
+- **Dash Mechanic**: Press Shift to dash with height-locking
+  - **Type 1 (Normal)**: Dash in camera direction while maintaining current height
+  - **Type 2 (Ball-Seeking)**: When facing the ball, dash towards it (within 45° angle)
+- **Height Lock**: Player maintains their Y position during dash (works off ledges, in air)
+- **Dash Animation**: Custom animation plays during dash
 - **Dash Cooldown**: 3 second cooldown between dashes
 - **Dash Distance**: 15 studs per dash over 0.2 seconds
-- **Aerial Movement**: Dash works in any direction including vertical
 
 ## Technical Details
 
@@ -34,6 +37,7 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 - Dummy model with attachments
 - Sword models in ReplicatedStorage
 - Parry animations
+- Dash animation (configured in AssetManager)
 
 ## Setup Instructions
 
@@ -46,10 +50,11 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 ## Project Structure
 ```
 ReplicatedStorage/
+├── AssetManager.lua     # Animation and asset references
 ├── BallConfig.lua       # Centralized configuration
 └── BallPhysics.lua      # Shared physics engine
 
-SeverScriptService/
+ServerScriptService/
 ├── BallServer.lua       # Server ball physics
 ├── SwordServer.lua      # Sword/parry system
 ├── PlayerSetup.lua      # Player configuration
