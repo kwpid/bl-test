@@ -81,6 +81,8 @@ local function createParryWindow(player, character, animator, animations, weld, 
         
         if data and data.deviceType == "Mobile" then
                 parryRange = parryRange * Config.Parry.MOBILE_RANGE_MULTIPLIER
+        elseif data and data.deviceType == "Console" then
+                parryRange = parryRange * Config.Parry.CONSOLE_RANGE_MULTIPLIER
         end
         
         local parryWindow = {
