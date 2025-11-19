@@ -1,5 +1,9 @@
 local BallConfig = {}
 
+BallConfig.Paths = {
+        REMOTE_EVENTS_FOLDER = "Ball_RemoteEvents",
+}
+
 BallConfig.Physics = {
         FLOAT_HEIGHT = 2.5,
         BASE_SPEED = 20,

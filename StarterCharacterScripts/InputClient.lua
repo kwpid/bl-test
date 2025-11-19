@@ -1,8 +1,10 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage.BallConfig)
 
-local swingEvent = ReplicatedStorage:WaitForChild("SwingEvent")
+local RemoteEventsFolder = ReplicatedStorage:WaitForChild(Config.Paths.REMOTE_EVENTS_FOLDER)
+local swingEvent = RemoteEventsFolder:WaitForChild("SwingEvent")
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 

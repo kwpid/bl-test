@@ -10,17 +10,15 @@ local DUMMY = workspace:WaitForChild("Dummy")
 local DUMMY_TORSO_ATTACHMENT = DUMMY:WaitForChild("Torso"):WaitForChild("SwordAttachment")
 local DUMMY_ARM_ATTACHMENT = DUMMY:WaitForChild("Right Arm"):WaitForChild("SwordSwing")
 
+local RemoteEventsFolder = ReplicatedStorage:WaitForChild(Config.Paths.REMOTE_EVENTS_FOLDER)
+
 local RemoteEvents = {
-        swing = ReplicatedStorage:FindFirstChild("SwingEvent") or Instance.new("RemoteEvent"),
+        swing = RemoteEventsFolder:WaitForChild("SwingEvent"),
 }
-RemoteEvents.swing.Name = "SwingEvent"
-RemoteEvents.swing.Parent = ReplicatedStorage
 
 local ServerEvents = {
-        ballHit = ReplicatedStorage:FindFirstChild("ServerBallHit") or Instance.new("BindableEvent"),
+        ballHit = RemoteEventsFolder:WaitForChild("ServerBallHit"),
 }
-ServerEvents.ballHit.Name = "ServerBallHit"
-ServerEvents.ballHit.Parent = ReplicatedStorage
 
 local playerData = {}
 local ballHitImmunity = {}

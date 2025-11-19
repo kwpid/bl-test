@@ -5,7 +5,8 @@ local RunService = game:GetService("RunService")
 local BallPhysics = require(ReplicatedStorage.BallPhysics)
 local Config = require(ReplicatedStorage.BallConfig)
 
-local ballUpdateEvent = ReplicatedStorage:WaitForChild("BallUpdateEvent")
+local RemoteEventsFolder = ReplicatedStorage:WaitForChild(Config.Paths.REMOTE_EVENTS_FOLDER)
+local ballUpdateEvent = RemoteEventsFolder:WaitForChild("BallUpdateEvent")
 local player = Players.LocalPlayer
 local ball = workspace:WaitForChild("Ball")
 
