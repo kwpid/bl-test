@@ -20,10 +20,26 @@ ball.Anchored = true
 ball.CanCollide = false
 ball.Shape = Enum.PartType.Ball
 
-local ballState = BallPhysics.new(ball.Position)
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 raycastParams.FilterDescendantsInstances = { ball }
+
+local function getGroundHeightInitial(position)
+        local rayOrigin = Vector3.new(position.X, position.Y + 10, position.Z)
+        local rayDirection = Vector3.new(0, -200, 0)
+        local rayResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+        return rayResult and rayResult.Position.Y or 0
+end
+
+local initialGroundHeight = getGroundHeightInitial(ball.Position)
+local spawnPosition = Vector3.new(
+        ball.Position.X,
+        initialGroundHeight + Config.Physics.FLOAT_HEIGHT,
+        ball.Position.Z
+)
+
+local ballState = BallPhysics.new(spawnPosition)
+ball.Position = spawnPosition
 
 local lastGroundCheck = 0
 local lastNetworkUpdate = 0
