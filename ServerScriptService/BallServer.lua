@@ -101,14 +101,23 @@ end)
 local lastHitTime = 0
 
 RemoteEvents.ballHit.OnServerEvent:Connect(function(player, cameraDirection)
+        print("BallServer received hit event from:", player.Name)
+        
         local character = player.Character
-        if not character then return end
+        if not character then 
+                warn("No character")
+                return 
+        end
 
         local hrp = character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
+        if not hrp then 
+                warn("No HRP")
+                return 
+        end
 
         local currentTime = tick()
         if currentTime - lastHitTime < Config.Parry.MIN_HIT_INTERVAL then
+                warn("Hit too soon")
                 return
         end
 
@@ -128,6 +137,9 @@ RemoteEvents.ballHit.OnServerEvent:Connect(function(player, cameraDirection)
         local speed = ballState:applyHit(cameraDirection)
 
         RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
+        
+        print(string.format("✓ Ball hit by %s | Hit #%d | Speed: %.1f | Distance: %.1f",
+                player.Name, ballState.hitCount, speed, distance))
 end)
 
 print("Ball server initialized")
