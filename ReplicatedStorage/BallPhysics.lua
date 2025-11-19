@@ -84,7 +84,7 @@ function BallPhysics:update(dt, raycastFunc, groundHeight)
                                 self.velocity = reflectedVelocity * Config.Physics.BOUNCE_ENERGY_LOSS
                                 self.position = Vector3.new(nextPosition.X, bounceHeight, nextPosition.Z)
                         else
-                                self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z) * 0.5
+                                self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z) * 0.95
                                 self.position = Vector3.new(nextPosition.X, bounceHeight, nextPosition.Z)
                         end
                         break
