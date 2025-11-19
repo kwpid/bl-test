@@ -4,7 +4,15 @@
 Professional Roblox ball parry game with client-side prediction, server-authoritative physics, and modular architecture.
 
 ## Recent Changes (Latest Update)
-**Dash system overhaul**:
+**Dash and ball physics improvements**:
+- ✅ Fixed dash falling issue: gravity completely disabled during dash (PlatformStand)
+- ✅ Type 2 dash now dashes TO the ball in full 3D (not height-locked)
+- ✅ Increased ball-facing angle to 70° (more lenient detection)
+- ✅ Reduced ball deceleration: 0.994 → 0.998 (maintains speed longer)
+- ✅ Added smooth gravity: ball falls when speed < 30 studs/sec
+- ✅ Fixed mid-air freeze bug: ball now smoothly descends to ground
+
+**Previous: Dash system overhaul**:
 - ✅ Removed debug logs from BallServer
 - ✅ Added AssetManager folder for animation references
 - ✅ Implemented Type 1 dash: Height-locked dashing (maintains Y position)

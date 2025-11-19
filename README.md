@@ -7,6 +7,8 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 ### Ball System
 - **Physics Engine**: Custom ball physics with floating, collision detection, and realistic bouncing
 - **Speed Mechanics**: Progressive speed increase with each successful hit (20 → 150 studs/sec)
+- **Reduced Deceleration**: Ball maintains speed longer (0.998 deceleration rate)
+- **Smooth Gravity**: When ball slows below 30 studs/sec, gravity gradually pulls it down
 - **Visual Effects**: Dynamic trail that changes color based on ball speed
 - **Smart Collision**: Raycasting-based collision detection with smooth interpolation
 - **Client Prediction**: Smooth ball movement with zero perceived latency
@@ -19,10 +21,12 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 
 ### Movement System
 - **Enhanced Speed**: Walkspeed set to 21 (faster than default)
-- **Dash Mechanic**: Press Shift to dash with height-locking
+- **Dash Mechanic**: Press Shift to dash with zero gravity
   - **Type 1 (Normal)**: Dash in camera direction while maintaining current height
-  - **Type 2 (Ball-Seeking)**: When facing the ball, dash towards it (within 45° angle)
-- **Height Lock**: Player maintains their Y position during dash (works off ledges, in air)
+  - **Type 2 (Ball-Seeking)**: When facing the ball (within 70° angle), dash directly to it in 3D
+- **No Falling During Dash**: Gravity is completely disabled during dash
+- **Height Lock (Type 1)**: Player maintains exact Y position during normal dash
+- **3D Movement (Type 2)**: Ball-seeking dash moves in full 3D space towards the ball
 - **Dash Animation**: Custom animation plays during dash
 - **Dash Cooldown**: 3 second cooldown between dashes
 - **Dash Distance**: 15 studs per dash over 0.2 seconds

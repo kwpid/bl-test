@@ -84,7 +84,9 @@ Physics = {
     BASE_SPEED = 20,           -- Starting speed
     SPEED_INCREMENT = 15,      -- Speed gain per hit
     MAX_SPEED = 150,           -- Speed cap
-    DECELERATION = 0.994,      -- Slowdown rate
+    DECELERATION = 0.998,      -- Slowdown rate (reduced for longer momentum)
+    GRAVITY = 0.15,            -- Gravity strength when ball is slow
+    GRAVITY_THRESHOLD = 30,    -- Speed below which gravity applies
 }
 
 Parry = {
@@ -102,7 +104,7 @@ Dash = {
     DURATION = 0.2,            -- Dash duration in seconds
     COOLDOWN = 3,              -- Cooldown between dashes
     KEYBIND = Enum.KeyCode.LeftShift,  -- Key to press for dash
-    BALL_FACING_ANGLE = 45,    -- Angle threshold for ball-seeking dash
+    BALL_FACING_ANGLE = 70,    -- Angle threshold for ball-seeking dash (more lenient)
     BALL_FACING_MAX_DISTANCE = 100,  -- Max distance to activate ball-seeking
 }
 
@@ -132,14 +134,16 @@ Network = {
 **Type 1 (Normal Dash)**:
 - Player dashes in camera direction
 - Height is locked to starting Y position
+- Gravity is completely disabled during dash (PlatformStand = true)
 - Works off ledges and in air
-- Player maintains height until dash completes
+- Player maintains exact height until dash completes
 
 **Type 2 (Ball-Seeking Dash)**:
-- Activates when player faces ball (within 45° angle)
-- Player dashes towards ball position
-- Still respects max dash distance
-- Height is locked to starting Y position
+- Activates when player faces ball (within 70° angle, increased from 45°)
+- Player dashes directly TO the ball in full 3D space
+- No height locking - moves through air towards ball
+- Gravity still disabled during dash
+- Respects max dash distance (15 studs)
 
 ### Visual Improvements
 - Server ball is hidden (transparency = 1)
