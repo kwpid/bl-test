@@ -17,9 +17,9 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 ### Combat System
 - **Sword Parrying**: Timing-based parrying mechanic with 10-stud range
 - **Cross-Platform Support**: Full support for PC, Mobile, and Console
-  - **Mobile**: Touch input + increased hitbox range (configurable multiplier)
-  - **Console**: Gamepad buttons (R1/R2/A) + increased hitbox range (configurable multiplier)
-  - **PC**: Mouse click input with standard range
+  - **PC**: Mouse click input, 10 studs range
+  - **Mobile**: Touch input, 13 studs range (configurable)
+  - **Console**: Gamepad buttons (R1/R2/A), 13 studs range (configurable)
 - **Animations**: Two-state animation system (miss/success)
 - **Cooldown System**: Prevents spam clicking
 - **Auto-Equipment**: Swords automatically attach to player characters

@@ -1,7 +1,7 @@
 local BallConfig = {}
 
 BallConfig.Paths = {
-        REMOTE_EVENTS_FOLDER = "Ball_RemoteEvents",
+        REMOTE_EVENTS_FOLDER = "Ball_Events",
         FLOOR_PART_NAME = "Floor",
 }
 
@@ -15,7 +15,7 @@ BallConfig.Physics = {
         BOUNCE_ENERGY_LOSS = 0.8,
         GRAVITY = 0.15,
         GRAVITY_THRESHOLD = 30,
-        
+
         MIN_BOUNCE_ANGLE = 45,
 }
 
@@ -26,9 +26,9 @@ BallConfig.Parry = {
         MIN_PARRY_TIME = 0.05,
         HIT_IMMUNITY_TIME = 0.5,
         MIN_HIT_INTERVAL = 0.05,
-        
-        MOBILE_RANGE_MULTIPLIER = 1.3,
-        CONSOLE_RANGE_MULTIPLIER = 1.3,
+
+        MOBILE_RANGE = 13,
+        CONSOLE_RANGE = 13,
 }
 
 BallConfig.Network = {

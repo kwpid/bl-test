@@ -89,11 +89,11 @@ Physics = {
 }
 
 Parry = {
-    RANGE = 10,                -- Parry distance
+    RANGE = 10,                -- PC parry range (studs)
     COOLDOWN = 0.5,            -- Input cooldown
     TIMEOUT = 5,               -- Parry window timeout
-    MOBILE_RANGE_MULTIPLIER = 1.3,   -- Mobile hitbox range multiplier
-    CONSOLE_RANGE_MULTIPLIER = 1.3,  -- Console hitbox range multiplier
+    MOBILE_RANGE = 13,         -- Mobile parry range (studs)
+    CONSOLE_RANGE = 13,        -- Console parry range (studs)
 }
 
 Player = {
@@ -136,20 +136,20 @@ The game automatically detects device type and adjusts accordingly:
 
 **PC (Desktop)**:
 - Mouse click to parry
-- Standard hitbox range (10 studs)
+- Parry range: 10 studs
 - Full keyboard controls
 
 **Mobile**:
 - Touch input to parry
-- Increased hitbox range (13 studs with 1.3x multiplier)
+- Parry range: 13 studs (configurable in BallConfig.lua)
 - Touch-optimized controls
 
 **Console (Xbox/PlayStation)**:
 - Gamepad buttons R1/R2/A to parry
-- Increased hitbox range (13 studs with 1.3x multiplier)
+- Parry range: 13 studs (configurable in BallConfig.lua)
 - Full gamepad support
 
-Device type is detected on client join and sent to server once. The server uses this to apply appropriate range multipliers. Multipliers are configurable in `BallConfig.lua`.
+Device type is detected on client join and sent to server once. The server uses this to apply the appropriate range for each device type. All ranges are configurable as absolute values in `BallConfig.lua` for easy comparison.
 
 ### Dash System
 **Type 1 (Normal Dash)**:

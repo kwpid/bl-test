@@ -5,9 +5,10 @@ Professional Roblox ball parry game with client-side prediction, server-authorit
 
 ## Recent Changes (Latest Update)
 **Cross-platform support and ball spawn fix**:
-- ✅ Enhanced mobile/console support with configurable hitbox multipliers
+- ✅ Enhanced mobile/console support with configurable hitbox ranges
 - ✅ Fixed ball spawning mid-air: ball now spawns at ground level + float height
-- ✅ Console range multiplier (1.3x) added to config alongside mobile multiplier
+- ✅ Console range (13 studs) and mobile range (13 studs) configurable in config
+- ✅ PC range: 10 studs, Mobile/Console: 13 studs (easier to compare)
 - ✅ Ball initialization properly calculates ground height on server start
 - ✅ Input support: Mouse (PC), Touch (Mobile), Gamepad R1/R2/A (Console)
 
