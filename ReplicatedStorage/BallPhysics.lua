@@ -32,7 +32,6 @@ function BallPhysics:update(dt, raycastFunc)
         
         self.velocity = self.velocity * Config.Physics.DECELERATION
         
-        -- Apply gravity when ball is slow and in the air
         local currentSpeed = self.velocity.Magnitude
         if currentSpeed < Config.Physics.GRAVITY_THRESHOLD then
                 local gravityForce = Config.Physics.GRAVITY * dt * 60
@@ -43,22 +42,17 @@ function BallPhysics:update(dt, raycastFunc)
                 )
         end
         
-        -- Recompute speed after gravity
         local postGravitySpeed = self.velocity.Magnitude
         
-        -- Only stop if speed is very low AND no significant vertical movement
-        -- This allows gravity to keep pulling the ball down
         if postGravitySpeed < Config.Physics.MIN_SPEED then
                 local horizontalSpeed = Vector3.new(self.velocity.X, 0, self.velocity.Z).Magnitude
                 local verticalSpeed = math.abs(self.velocity.Y)
                 
-                -- Stop only if both horizontal and vertical speeds are negligible
                 if horizontalSpeed < 0.5 and verticalSpeed < 0.1 then
                         self.velocity = Vector3.new(0, 0, 0)
                         self.isMoving = false
                         return false
                 end
-                -- Otherwise keep moving (gravity is still pulling it down)
         end
         
         local moveDistance = self.velocity * dt

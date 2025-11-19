@@ -23,74 +23,47 @@ ball.CanCollide = false
 ball.Shape = Enum.PartType.Ball
 
 local ballState = BallPhysics.new(ball.Position)
-local ignoredParts = {}
+local raycastParams = RaycastParams.new()
+raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+raycastParams.FilterDescendantsInstances = { ball }
+
 local lastGroundCheck = 0
 local lastNetworkUpdate = 0
 
-local function updateIgnoredParts()
-        ignoredParts = {}
-
+local function updateRaycastFilter()
+        local filterList = { ball }
+        
         for _, player in pairs(Players:GetPlayers()) do
                 if player.Character then
-                        for _, part in pairs(player.Character:GetDescendants()) do
-                                if part:IsA("BasePart") then
-                                        table.insert(ignoredParts, part)
-                                end
-                        end
-
-                        local sword = player.Character:FindFirstChild("HipSword")
-                        if sword then
-                                for _, part in pairs(sword:GetDescendants()) do
-                                        if part:IsA("BasePart") then
-                                                table.insert(ignoredParts, part)
-                                        end
-                                end
-                        end
+                        table.insert(filterList, player.Character)
                 end
         end
+        
+        raycastParams.FilterDescendantsInstances = filterList
 end
 
 Players.PlayerAdded:Connect(function(player)
         player.CharacterAdded:Connect(function()
                 task.wait(0.5)
-                updateIgnoredParts()
+                updateRaycastFilter()
         end)
 end)
 
-updateIgnoredParts()
-
-local function createRaycastParams()
-        local params = RaycastParams.new()
-        params.FilterType = Enum.RaycastFilterType.Exclude
-        params.FilterDescendantsInstances = { ball }
-
-        for _, part in pairs(ignoredParts) do
-                if part and part:IsDescendantOf(workspace) then
-                        table.insert(params.FilterDescendantsInstances, part)
-                end
-        end
-
-        return params
-end
+updateRaycastFilter()
 
 local function getGroundHeight(position)
         local rayOrigin = Vector3.new(position.X, position.Y + 10, position.Z)
         local rayDirection = Vector3.new(0, -200, 0)
-        local params = createRaycastParams()
-
-        local rayResult = workspace:Raycast(rayOrigin, rayDirection, params)
+        local rayResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
         return rayResult and rayResult.Position.Y or 0
 end
 
 local function checkCollision(from, to)
         local direction = (to - from)
         local distance = direction.Magnitude
-
         if distance == 0 then return nil end
-
-        local params = createRaycastParams()
-        local rayResult = workspace:Raycast(from, direction.Unit * (distance + ball.Size.X / 2), params)
-
+        
+        local rayResult = workspace:Raycast(from, direction.Unit * (distance + ball.Size.X / 2), raycastParams)
         return rayResult
 end
 

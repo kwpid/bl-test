@@ -10,8 +10,6 @@ local DUMMY = workspace:WaitForChild("Dummy")
 local DUMMY_TORSO_ATTACHMENT = DUMMY:WaitForChild("Torso"):WaitForChild("SwordAttachment")
 local DUMMY_ARM_ATTACHMENT = DUMMY:WaitForChild("Right Arm"):WaitForChild("SwordSwing")
 
-local HIT_IMMUNITY_TIME = 0.5
-
 local RemoteEvents = {
         swing = ReplicatedStorage:FindFirstChild("SwingEvent") or Instance.new("RemoteEvent"),
         ballHit = ReplicatedStorage:WaitForChild("BallHitEvent"),
@@ -60,7 +58,7 @@ end
 
 local function isBallInHitImmunity(userId)
         if not ballHitImmunity[userId] then return false end
-        return tick() - ballHitImmunity[userId] < HIT_IMMUNITY_TIME
+        return tick() - ballHitImmunity[userId] < Config.Parry.HIT_IMMUNITY_TIME
 end
 
 local function setBallHitImmunity(userId)
@@ -77,8 +75,6 @@ local function createParryWindow(player, character, animator, animations, weld, 
         
         local failTrack = animator:LoadAnimation(animations.fail)
         failTrack:Play()
-        
-        local MIN_PARRY_TIME = 0.05
         
         parryWindow.connection = RunService.Heartbeat:Connect(function()
                 if not parryWindow.active then
@@ -102,7 +98,7 @@ local function createParryWindow(player, character, animator, animations, weld, 
                 end
                 
                 local timeSinceStart = tick() - parryWindow.startTime
-                if timeSinceStart < MIN_PARRY_TIME then
+                if timeSinceStart < Config.Parry.MIN_PARRY_TIME then
                         return
                 end
                 
