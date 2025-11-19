@@ -25,7 +25,7 @@ function BallPhysics:applyHit(direction, customSpeed)
         return speed
 end
 
-function BallPhysics:update(dt, raycastFunc)
+function BallPhysics:update(dt, raycastFunc, groundHeight)
         if not self.isMoving then
                 return false
         end
@@ -67,30 +67,42 @@ function BallPhysics:update(dt, raycastFunc)
                         
                         if collision then
                                 local normal = collision.Normal
-                                local isGround = normal.Y > Config.Physics.GROUND_NORMAL_THRESHOLD
+                                local hitPartName = collision.Instance and collision.Instance.Name or ""
+                                local isFloor = hitPartName == Config.Paths.FLOOR_PART_NAME or 
+                                               (collision.Instance and collision.Instance:FindFirstAncestor(Config.Paths.FLOOR_PART_NAME))
                                 local currentSpeed = self.velocity.Magnitude
                                 
                                 local shouldBounce = true
                                 
-                                if isGround then
-                                        if currentSpeed < Config.Physics.MIN_BOUNCE_SPEED then
-                                                local velocityDirection = self.velocity.Unit
-                                                local impactAngle = math.deg(math.asin(math.abs(velocityDirection.Y)))
-                                                
-                                                if impactAngle < Config.Physics.MIN_BOUNCE_ANGLE then
-                                                        shouldBounce = false
-                                                        self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z) * 0.5
-                                                        self.position = collision.Position + (normal * 1.2)
+                                if isFloor then
+                                        local bounceHeight = groundHeight + Config.Physics.FLOAT_HEIGHT
+                                        
+                                        if nextPosition.Y <= bounceHeight then
+                                                if currentSpeed < Config.Physics.MIN_BOUNCE_SPEED then
+                                                        local velocityDirection = self.velocity.Unit
+                                                        local impactAngle = math.deg(math.asin(math.abs(velocityDirection.Y)))
+                                                        
+                                                        if impactAngle < Config.Physics.MIN_BOUNCE_ANGLE then
+                                                                shouldBounce = false
+                                                                self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z) * 0.5
+                                                                self.position = Vector3.new(nextPosition.X, bounceHeight, nextPosition.Z)
+                                                        end
                                                 end
+                                                
+                                                if shouldBounce then
+                                                        local reflectedVelocity = self.velocity - 2 * self.velocity:Dot(normal) * normal
+                                                        self.velocity = reflectedVelocity * Config.Physics.BOUNCE_ENERGY_LOSS
+                                                        self.position = Vector3.new(nextPosition.X, bounceHeight, nextPosition.Z)
+                                                end
+                                        else
+                                                self.position = nextPosition
                                         end
-                                end
-                                
-                                if shouldBounce then
+                                else
                                         local reflectedVelocity = self.velocity - 2 * self.velocity:Dot(normal) * normal
                                         self.velocity = reflectedVelocity * Config.Physics.BOUNCE_ENERGY_LOSS
                                         self.position = collision.Position + (normal * 1.2)
                                         
-                                        if self.velocity.Magnitude < 2 and not isGround then
+                                        if self.velocity.Magnitude < 2 then
                                                 self.velocity = Vector3.new(0, 0, 0)
                                                 self.isMoving = false
                                         end

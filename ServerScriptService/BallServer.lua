@@ -78,15 +78,18 @@ local function checkCollision(from, to)
         return rayResult
 end
 
-RunService.Heartbeat:Connect(function(dt)
-        local updated = ballState:update(dt, checkCollision)
+local currentGroundHeight = 0
 
+RunService.Heartbeat:Connect(function(dt)
         lastGroundCheck = lastGroundCheck + dt
         if lastGroundCheck > 0.1 then
-                local groundHeight = getGroundHeight(ballState.position)
-                ballState:enforceFloatHeight(groundHeight)
+                currentGroundHeight = getGroundHeight(ballState.position)
                 lastGroundCheck = 0
         end
+
+        local updated = ballState:update(dt, checkCollision, currentGroundHeight)
+
+        ballState:enforceFloatHeight(currentGroundHeight)
 
         ball.Position = ballState.position
 

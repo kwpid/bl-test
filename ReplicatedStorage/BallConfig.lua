@@ -2,6 +2,7 @@ local BallConfig = {}
 
 BallConfig.Paths = {
         REMOTE_EVENTS_FOLDER = "Ball_RemoteEvents",
+        FLOOR_PART_NAME = "Floor",
 }
 
 BallConfig.Physics = {
@@ -17,7 +18,6 @@ BallConfig.Physics = {
         
         MIN_BOUNCE_SPEED = 15,
         MIN_BOUNCE_ANGLE = 45,
-        GROUND_NORMAL_THRESHOLD = 0.7,
 }
 
 BallConfig.Parry = {

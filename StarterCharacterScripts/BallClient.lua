@@ -91,9 +91,9 @@ RunService.Heartbeat:Connect(function(dt)
         end
         
         if tick() - lastServerUpdate < 0.5 then
-                clientState:update(dt, checkCollision)
-                
                 local groundHeight = getGroundHeight(clientState.position)
+                clientState:update(dt, checkCollision, groundHeight)
+                
                 clientState:enforceFloatHeight(groundHeight)
         end
         
