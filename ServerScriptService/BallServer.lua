@@ -32,13 +32,26 @@ local lastNetworkUpdate = 0
 
 local function updateRaycastFilter()
         local filterList = { ball }
-        
+
         for _, player in pairs(Players:GetPlayers()) do
                 if player.Character then
-                        table.insert(filterList, player.Character)
+                        for _, part in pairs(player.Character:GetDescendants()) do
+                                if part:IsA("BasePart") then
+                                        table.insert(filterList, part)
+                                end
+                        end
+                        
+                        local sword = player.Character:FindFirstChild("HipSword")
+                        if sword then
+                                for _, part in pairs(sword:GetDescendants()) do
+                                        if part:IsA("BasePart") then
+                                                table.insert(filterList, part)
+                                        end
+                                end
+                        end
                 end
         end
-        
+
         raycastParams.FilterDescendantsInstances = filterList
 end
 
@@ -62,7 +75,7 @@ local function checkCollision(from, to)
         local direction = (to - from)
         local distance = direction.Magnitude
         if distance == 0 then return nil end
-        
+
         local rayResult = workspace:Raycast(from, direction.Unit * (distance + ball.Size.X / 2), raycastParams)
         return rayResult
 end
@@ -89,7 +102,6 @@ RunService.Heartbeat:Connect(function(dt)
 end)
 
 local lastHitTime = 0
-local MIN_HIT_INTERVAL = 0.05
 
 BindableEvents.ballHit.Event:Connect(function(player, cameraDirection)
         local character = player.Character
@@ -99,7 +111,7 @@ BindableEvents.ballHit.Event:Connect(function(player, cameraDirection)
         if not hrp then return end
 
         local currentTime = tick()
-        if currentTime - lastHitTime < MIN_HIT_INTERVAL then
+        if currentTime - lastHitTime < Config.Parry.MIN_HIT_INTERVAL then
                 return
         end
 
@@ -119,9 +131,6 @@ BindableEvents.ballHit.Event:Connect(function(player, cameraDirection)
         local speed = ballState:applyHit(cameraDirection)
 
         RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
-
-        print(string.format("✓ Ball hit by %s | Hit #%d | Speed: %.1f | Distance: %.1f",
-                player.Name, ballState.hitCount, speed, distance))
 end)
 
 print("Ball server initialized")
