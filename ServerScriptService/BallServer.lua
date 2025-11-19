@@ -125,12 +125,9 @@ RemoteEvents.ballHit.OnServerEvent:Connect(function(player, cameraDirection)
 
         lastHitTime = currentTime
 
-        local speed = ballState:applyHit(cameraDirection)
+        ballState:applyHit(cameraDirection)
 
         RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
-        
-        print(string.format("✓ Ball hit by %s | Hit #%d | Speed: %.1f | Distance: %.1f",
-                player.Name, ballState.hitCount, speed, distance))
 end)
 
 print("Ball server initialized")
