@@ -67,17 +67,15 @@ function BallPhysics:update(dt, raycastFunc, groundHeight)
                 
                 if crossedFloorPlane then
                         local currentSpeed = self.velocity.Magnitude
+                        local velocityDirection = self.velocity.Unit
+                        local impactAngle = math.deg(math.asin(math.abs(velocityDirection.Y)))
+                        
                         local shouldBounce = false
                         
-                        if currentSpeed >= Config.Physics.MIN_BOUNCE_SPEED then
+                        if currentSpeed >= Config.Physics.MIN_BOUNCE_SPEED and impactAngle >= Config.Physics.MIN_BOUNCE_ANGLE then
                                 shouldBounce = true
-                        else
-                                local velocityDirection = self.velocity.Unit
-                                local impactAngle = math.deg(math.asin(math.abs(velocityDirection.Y)))
-                                
-                                if impactAngle >= Config.Physics.MIN_BOUNCE_ANGLE then
-                                        shouldBounce = true
-                                end
+                        elseif currentSpeed < Config.Physics.MIN_BOUNCE_SPEED and impactAngle >= Config.Physics.MIN_BOUNCE_ANGLE then
+                                shouldBounce = true
                         end
                         
                         if shouldBounce then
