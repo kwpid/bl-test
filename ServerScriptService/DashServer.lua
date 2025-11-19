@@ -29,19 +29,21 @@ local function performDash(player, dashData)
         -- Disable gravity during dash
         humanoid.PlatformStand = true
         
-        -- Load and play dash animation
-        local animator = humanoid:FindFirstChildOfClass("Animator")
-        if not animator then
-                animator = Instance.new("Animator")
-                animator.Parent = humanoid
-        end
-        
-        local dashAnim = ReplicatedStorage:FindFirstChild("AssetManager") 
-                and ReplicatedStorage.AssetManager:FindFirstChild("Dash")
-        if dashAnim then
-                local animClone = dashAnim:Clone()
-                local animTrack = animator:LoadAnimation(animClone)
-                animTrack:Play()
+        -- Load and play dash animation (optional)
+        local assetManager = ReplicatedStorage:FindFirstChild("AssetManager")
+        if assetManager then
+                local dashAnim = assetManager:FindFirstChild("Dash")
+                if dashAnim then
+                        local animator = humanoid:FindFirstChildOfClass("Animator")
+                        if not animator then
+                                animator = Instance.new("Animator")
+                                animator.Parent = humanoid
+                        end
+                        
+                        local animClone = dashAnim:Clone()
+                        local animTrack = animator:LoadAnimation(animClone)
+                        animTrack:Play()
+                end
         end
         
         local dashDirection

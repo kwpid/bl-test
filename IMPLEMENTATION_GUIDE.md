@@ -52,11 +52,10 @@ The codebase has been completely overhauled with a professional, modular archite
 2. **Place new files** in Roblox Studio:
    
    **ReplicatedStorage:**
-   - Create `AssetManager` folder
-   - Inside `AssetManager`, add a `Dash` Animation object (upload to Roblox first)
    - Create `BallConfig` ModuleScript
    - Create `BallPhysics` ModuleScript
    - Ensure `Swords` folder exists with `DefaultSword` model
+   - (Optional) Create `AssetManager` folder with `Dash` Animation object for dash animation
 
    **ServerScriptService:**
    - Add `BallServer` Script

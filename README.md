@@ -27,7 +27,7 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 - **No Falling During Dash**: Gravity is completely disabled during dash
 - **Height Lock (Type 1)**: Player maintains exact Y position during normal dash
 - **3D Movement (Type 2)**: Ball-seeking dash moves in full 3D space towards the ball
-- **Dash Animation**: Custom animation plays during dash
+- **Dash Animation**: Custom animation plays during dash (optional)
 - **Dash Cooldown**: 3 second cooldown between dashes
 - **Dash Distance**: 15 studs per dash over 0.2 seconds
 
@@ -41,7 +41,7 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 - Dummy model with attachments
 - Sword models in ReplicatedStorage
 - Parry animations
-- AssetManager folder in ReplicatedStorage with Dash animation
+- (Optional) AssetManager folder in ReplicatedStorage with Dash animation
 
 ## Setup Instructions
 
