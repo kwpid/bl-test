@@ -7,7 +7,7 @@ The codebase has been completely overhauled with a professional, modular archite
 ### Module Structure
 
 **ReplicatedStorage/** (Shared modules)
-- `AssetManager.lua` - Animation and asset ID references
+- `AssetManager/` - Folder containing animation objects
 - `BallConfig.lua` - Centralized configuration constants
 - `BallPhysics.lua` - Shared physics engine (client + server)
 
@@ -52,11 +52,11 @@ The codebase has been completely overhauled with a professional, modular archite
 2. **Place new files** in Roblox Studio:
    
    **ReplicatedStorage:**
-   - Create `AssetManager` ModuleScript
+   - Create `AssetManager` folder
+   - Inside `AssetManager`, add a `Dash` Animation object (upload to Roblox first)
    - Create `BallConfig` ModuleScript
    - Create `BallPhysics` ModuleScript
    - Ensure `Swords` folder exists with `DefaultSword` model
-   - **REQUIRED**: Upload dash animation to Roblox and update `AssetManager.Dash` with the asset ID
 
    **ServerScriptService:**
    - Add `BallServer` Script

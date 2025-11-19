@@ -37,7 +37,7 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 - Dummy model with attachments
 - Sword models in ReplicatedStorage
 - Parry animations
-- Dash animation (configured in AssetManager)
+- AssetManager folder in ReplicatedStorage with Dash animation
 
 ## Setup Instructions
 
@@ -50,7 +50,8 @@ A Roblox game featuring advanced ball physics and sword parrying mechanics.
 ## Project Structure
 ```
 ReplicatedStorage/
-├── AssetManager.lua     # Animation and asset references
+├── AssetManager/        # Folder containing animations
+│   └── Dash            # Dash animation object
 ├── BallConfig.lua       # Centralized configuration
 └── BallPhysics.lua      # Shared physics engine
 

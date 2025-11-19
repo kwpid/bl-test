@@ -2,7 +2,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
 local Config = require(ReplicatedStorage.BallConfig)
-local AssetManager = require(ReplicatedStorage.AssetManager)
 
 local dashEvent = ReplicatedStorage:FindFirstChild("DashEvent")
 if not dashEvent then
@@ -34,11 +33,11 @@ local function performDash(player, dashData)
                 animator.Parent = humanoid
         end
         
-        local dashAnimId = AssetManager.Dash
-        if dashAnimId and dashAnimId ~= "rbxassetid://0" then
-                local dashAnim = Instance.new("Animation")
-                dashAnim.AnimationId = dashAnimId
-                local animTrack = animator:LoadAnimation(dashAnim)
+        local dashAnim = ReplicatedStorage:FindFirstChild("AssetManager") 
+                and ReplicatedStorage.AssetManager:FindFirstChild("Dash")
+        if dashAnim then
+                local animClone = dashAnim:Clone()
+                local animTrack = animator:LoadAnimation(animClone)
                 animTrack:Play()
         end
         

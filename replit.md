@@ -6,7 +6,7 @@ Professional Roblox ball parry game with client-side prediction, server-authorit
 ## Recent Changes (Latest Update)
 **Dash system overhaul**:
 - ✅ Removed debug logs from BallServer
-- ✅ Added AssetManager module for animation references
+- ✅ Added AssetManager folder for animation references
 - ✅ Implemented Type 1 dash: Height-locked dashing (maintains Y position)
 - ✅ Implemented Type 2 dash: Ball-seeking dash when facing ball
 - ✅ Cleaner, more modular dash code
@@ -35,7 +35,7 @@ Professional Roblox ball parry game with client-side prediction, server-authorit
 
 ### Modular Structure
 **ReplicatedStorage/** (Shared)
-- `AssetManager.lua` - Animation and asset IDs
+- `AssetManager/` - Folder containing animation objects (Dash, etc.)
 - `BallConfig.lua` - Configuration constants
 - `BallPhysics.lua` - Physics engine (client + server)
 
