@@ -14,26 +14,18 @@ RemoteEvents.ballUpdate.Parent = ReplicatedStorage
 RemoteEvents.ballHit.Name = "BallHitEvent"
 RemoteEvents.ballHit.Parent = ReplicatedStorage
 
-local map = workspace:WaitForChild("Map")
-local spawn = map:WaitForChild("Spawn")
-local goalBlue = map:WaitForChild("GoalDetectorBlue")
-local goalRed = map:WaitForChild("GoalDetectorRed")
-
 local ball = workspace:WaitForChild("Ball")
 ball.Anchored = true
 ball.CanCollide = false
 ball.Shape = Enum.PartType.Ball
 
-local spawnPosition = spawn.Position
-local ballState = BallPhysics.new(spawnPosition)
-ball.Position = spawnPosition
+local ballState = BallPhysics.new(ball.Position)
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 raycastParams.FilterDescendantsInstances = { ball }
 
 local lastGroundCheck = 0
 local lastNetworkUpdate = 0
-local isResetting = false
 
 local function updateRaycastFilter()
         local filterList = { ball }
@@ -69,49 +61,6 @@ end)
 
 updateRaycastFilter()
 
-local function resetBall()
-        isResetting = true
-        ballState.position = spawnPosition
-        ballState.velocity = Vector3.new(0, 0, 0)
-        ballState.isMoving = false
-        ballState.hitCount = 0
-        ball.Position = spawnPosition
-        RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
-        task.wait(0.1)
-        isResetting = false
-end
-
-local function checkGoalCollision(position)
-        if isResetting then return end
-        
-        local ballRegion = Region3.new(position - Vector3.new(2, 2, 2), position + Vector3.new(2, 2, 2))
-        ballRegion:ExpandToGrid(4)
-        
-        local blueMin = goalBlue.Position - (goalBlue.Size / 2)
-        local blueMax = goalBlue.Position + (goalBlue.Size / 2)
-        
-        if position.X >= blueMin.X and position.X <= blueMax.X and
-           position.Y >= blueMin.Y and position.Y <= blueMax.Y and
-           position.Z >= blueMin.Z and position.Z <= blueMax.Z then
-                print("GOAL! Blue team was scored on!")
-                task.delay(Config.Goal.RESET_DELAY, resetBall)
-                return true
-        end
-        
-        local redMin = goalRed.Position - (goalRed.Size / 2)
-        local redMax = goalRed.Position + (goalRed.Size / 2)
-        
-        if position.X >= redMin.X and position.X <= redMax.X and
-           position.Y >= redMin.Y and position.Y <= redMax.Y and
-           position.Z >= redMin.Z and position.Z <= redMax.Z then
-                print("GOAL! Red team was scored on!")
-                task.delay(Config.Goal.RESET_DELAY, resetBall)
-                return true
-        end
-        
-        return false
-end
-
 local function getGroundHeight(position)
         local rayOrigin = Vector3.new(position.X, position.Y + 10, position.Z)
         local rayDirection = Vector3.new(0, -200, 0)
@@ -129,11 +78,7 @@ local function checkCollision(from, to)
 end
 
 RunService.Heartbeat:Connect(function(dt)
-        if isResetting then return end
-        
         local updated = ballState:update(dt, checkCollision)
-        
-        checkGoalCollision(ballState.position)
 
         lastGroundCheck = lastGroundCheck + dt
         if lastGroundCheck > 0.1 then
@@ -156,8 +101,6 @@ end)
 local lastHitTime = 0
 
 RemoteEvents.ballHit.OnServerEvent:Connect(function(player, cameraDirection)
-        if isResetting then return end
-        
         local character = player.Character
         if not character then return end
 
