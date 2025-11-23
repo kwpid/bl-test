@@ -7,8 +7,8 @@ BallConfig.Paths = {
 
 BallConfig.Physics = {
         FLOAT_HEIGHT = 2.5,
-        BASE_SPEED = 20,
-        SPEED_INCREMENT = 10,
+        BASE_SPEED = 10,
+        SPEED_INCREMENT = 15,
         MAX_SPEED = 110,
         DECELERATION = 0.998,
         MIN_SPEED = 1,
