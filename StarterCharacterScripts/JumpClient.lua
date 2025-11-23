@@ -42,20 +42,28 @@ humanoid.StateChanged:Connect(function(oldState, newState)
 	end
 end)
 
+local function tryDoubleJump()
+	local state = humanoid:GetState()
+	local inAir = (state == Enum.HumanoidStateType.Freefall or state == Enum.HumanoidStateType.Jumping)
+
+	if inAir and not hasDoubleJumped then
+		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+		hasDoubleJumped = true
+		playDoubleJumpEffect()
+	end
+end
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 
 	if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Space or
 		input.UserInputType == Enum.UserInputType.Gamepad1 and input.KeyCode == Enum.KeyCode.ButtonA then
+		tryDoubleJump()
+	end
+end)
 
-		local state = humanoid:GetState()
-		local inAir = (state == Enum.HumanoidStateType.Freefall or state == Enum.HumanoidStateType.Jumping)
-
-		if inAir and not hasDoubleJumped then
-			humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-			hasDoubleJumped = true
-
-			playDoubleJumpEffect()
-		end
+UserInputService.JumpRequest:Connect(function()
+	if UserInputService:GetLastInputType() == Enum.UserInputType.Touch then
+		tryDoubleJump()
 	end
 end)
