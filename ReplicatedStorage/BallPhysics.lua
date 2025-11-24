@@ -2,153 +2,151 @@ local BallPhysics = {}
 local Config = require(script.Parent.BallConfig)
 
 function BallPhysics.new(initialPosition)
-        local self = {
-                position = initialPosition or Vector3.new(0, 10, 0),
-                velocity = Vector3.new(0, 0, 0),
-                isMoving = false,
-                hitCount = 0,
-        }
-        
-        setmetatable(self, {__index = BallPhysics})
-        return self
+	local self = {
+		position = initialPosition or Vector3.new(0, 10, 0),
+		velocity = Vector3.new(0, 0, 0),
+		isMoving = false,
+		hitCount = 0,
+	}
+
+	setmetatable(self, { __index = BallPhysics })
+	return self
 end
 
 function BallPhysics:applyHit(direction, customSpeed)
-        self.hitCount = self.hitCount + 1
-        
-        local speed = customSpeed or (Config.Physics.BASE_SPEED + (self.hitCount - 1) * Config.Physics.SPEED_INCREMENT)
-        speed = math.min(speed, Config.Physics.MAX_SPEED)
-        
-        self.velocity = direction.Unit * speed
-        self.isMoving = true
-        
-        return speed
+	self.hitCount = self.hitCount + 1
+
+	local speed = customSpeed or (Config.Physics.BASE_SPEED + (self.hitCount - 1) * Config.Physics.SPEED_INCREMENT)
+	speed = math.min(speed, Config.Physics.MAX_SPEED)
+
+	self.velocity = direction.Unit * speed
+	self.isMoving = true
+
+	return speed
 end
 
 function BallPhysics:update(dt, raycastFunc, groundHeight)
-        if not self.isMoving then
-                return false
-        end
-        
-        self.velocity = self.velocity * Config.Physics.DECELERATION
-        
-        local currentSpeed = self.velocity.Magnitude
-        if currentSpeed < Config.Physics.GRAVITY_THRESHOLD then
-                local gravityForce = Config.Physics.GRAVITY * dt * 60
-                self.velocity = Vector3.new(
-                        self.velocity.X,
-                        self.velocity.Y - gravityForce,
-                        self.velocity.Z
-                )
-        end
-        
-        local postGravitySpeed = self.velocity.Magnitude
-        
-        if postGravitySpeed < Config.Physics.MIN_SPEED then
-                local horizontalSpeed = Vector3.new(self.velocity.X, 0, self.velocity.Z).Magnitude
-                local verticalSpeed = math.abs(self.velocity.Y)
+	if not self.isMoving then
+		return false
+	end
+
+	self.velocity = self.velocity * Config.Physics.DECELERATION
+
+	local currentSpeed = self.velocity.Magnitude
+	if currentSpeed < Config.Physics.GRAVITY_THRESHOLD then
+		local gravityForce = Config.Physics.GRAVITY * dt * 60
+		self.velocity = Vector3.new(self.velocity.X, self.velocity.Y - gravityForce, self.velocity.Z)
+	end
+
+	local postGravitySpeed = self.velocity.Magnitude
+
+	if postGravitySpeed < Config.Physics.MIN_SPEED then
+		local horizontalSpeed = Vector3.new(self.velocity.X, 0, self.velocity.Z).Magnitude
+		local verticalSpeed = math.abs(self.velocity.Y)
+
+		if horizontalSpeed < 0.5 and verticalSpeed < 0.1 then
+			self.velocity = Vector3.new(0, 0, 0)
+			self.isMoving = false
+			return false
+		end
+	end
+
+	local moveDistance = self.velocity * dt
+	local steps = math.max(1, math.ceil(moveDistance.Magnitude / 0.5))
+	local stepVector = moveDistance / steps
+
+	for i = 1, steps do
+		local nextPosition = self.position + stepVector
+		local bounceHeight = groundHeight + Config.Physics.FLOAT_HEIGHT
+		local crossedFloorPlane = nextPosition.Y <= bounceHeight and self.velocity.Y < -1
                 
-                if horizontalSpeed < 0.5 and verticalSpeed < 0.1 then
-                        self.velocity = Vector3.new(0, 0, 0)
-                        self.isMoving = false
-                        return false
-                end
-        end
-        
-        local moveDistance = self.velocity * dt
-        local steps = math.max(1, math.ceil(moveDistance.Magnitude / 0.5))
-        local stepVector = moveDistance / steps
-        
-        for i = 1, steps do
-                local nextPosition = self.position + stepVector
-                
-                local bounceHeight = groundHeight + Config.Physics.FLOAT_HEIGHT
-                local crossedFloorPlane = self.position.Y > bounceHeight and nextPosition.Y <= bounceHeight and self.velocity.Y < -1
-                
-                if crossedFloorPlane then
-                        local currentSpeed = self.velocity.Magnitude
-                        local velocityDirection = self.velocity.Unit
-                        local impactAngle = math.deg(math.asin(math.abs(velocityDirection.Y)))
-                        
-                        local shouldBounce = false
-                        
-                        if impactAngle >= Config.Physics.MIN_BOUNCE_ANGLE then
-                                shouldBounce = true
-                        end
-                        
-                        if shouldBounce then
-                                local normal = Vector3.new(0, 1, 0)
-                                local reflectedVelocity = self.velocity - 2 * self.velocity:Dot(normal) * normal
-                                self.velocity = reflectedVelocity * Config.Physics.BOUNCE_ENERGY_LOSS
-                                self.position = Vector3.new(nextPosition.X, bounceHeight, nextPosition.Z)
-                        else
-                                self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z) * 0.95
-                                self.position = Vector3.new(nextPosition.X, bounceHeight, nextPosition.Z)
-                        end
-                        break
-                end
-                
-                if raycastFunc then
-                        local collision = raycastFunc(self.position, nextPosition)
-                        
-                        if collision then
-                                local normal = collision.Normal
-                                local reflectedVelocity = self.velocity - 2 * self.velocity:Dot(normal) * normal
-                                self.velocity = reflectedVelocity * Config.Physics.BOUNCE_ENERGY_LOSS
-                                self.position = collision.Position + (normal * 1.2)
-                                
-                                if self.velocity.Magnitude < 2 then
-                                        self.velocity = Vector3.new(0, 0, 0)
-                                        self.isMoving = false
-                                end
-                                break
-                        else
-                                self.position = nextPosition
-                        end
-                else
-                        self.position = nextPosition
-                end
-        end
-        
-        return true
+		if crossedFloorPlane then
+			local currentSpeed = self.velocity.Magnitude
+			local velocityDirection = self.velocity.Unit
+			local impactAngle = math.deg(math.asin(math.abs(velocityDirection.Y)))
+
+			local shouldBounce = false
+
+			if impactAngle >= Config.Physics.MIN_BOUNCE_ANGLE then
+				shouldBounce = true
+			end
+
+			if shouldBounce then
+				local normal = Vector3.new(0, 1, 0)
+				local reflectedVelocity = self.velocity - 2 * self.velocity:Dot(normal) * normal
+				self.velocity = reflectedVelocity * Config.Physics.BOUNCE_ENERGY_LOSS
+				self.position = Vector3.new(nextPosition.X, bounceHeight, nextPosition.Z)
+			else
+				self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z) * 0.95
+				self.position = Vector3.new(nextPosition.X, bounceHeight, nextPosition.Z)
+			end
+			break
+		end
+
+		if raycastFunc then
+			local collision = raycastFunc(self.position, nextPosition)
+
+			if collision then
+				local normal = collision.Normal
+				local reflectedVelocity = self.velocity - 2 * self.velocity:Dot(normal) * normal
+				self.velocity = reflectedVelocity * Config.Physics.BOUNCE_ENERGY_LOSS
+				self.position = collision.Position + (normal * 1.2)
+				if self.position.Y < bounceHeight then
+					self.position = Vector3.new(self.position.X, bounceHeight, self.position.Z)
+				end
+
+				if self.velocity.Magnitude < 2 then
+					self.velocity = Vector3.new(0, 0, 0)
+					self.isMoving = false
+				end
+				break
+			else
+				self.position = nextPosition
+			end
+		else
+			self.position = nextPosition
+		end
+	end
+
+	return true
 end
 
 function BallPhysics:enforceFloatHeight(groundHeight)
-        local targetHeight = groundHeight + Config.Physics.FLOAT_HEIGHT
-        
-        if self.position.Y < targetHeight then
-                if not self.isMoving or math.abs(self.velocity.Y) < 0.5 then
-                        self.position = Vector3.new(self.position.X, targetHeight, self.position.Z)
-                        
-                        if self.isMoving and self.velocity.Y < 0 then
-                                self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z)
-                        end
-                end
-        end
+	local targetHeight = groundHeight + Config.Physics.FLOAT_HEIGHT
+
+	if self.position.Y < targetHeight then
+		if not self.isMoving or math.abs(self.velocity.Y) < 0.5 then
+			self.position = Vector3.new(self.position.X, targetHeight, self.position.Z)
+
+			if self.isMoving and self.velocity.Y < 0 then
+				self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z)
+			end
+		end
+	end
 end
 
 function BallPhysics:getSpeed()
-        return self.velocity.Magnitude
+	return self.velocity.Magnitude
 end
 
 function BallPhysics:getSpeedPercent()
-        return math.clamp(self:getSpeed() / Config.Physics.MAX_SPEED, 0, 1)
+	return math.clamp(self:getSpeed() / Config.Physics.MAX_SPEED, 0, 1)
 end
 
 function BallPhysics:serialize()
-        return {
-                position = self.position,
-                velocity = self.velocity,
-                isMoving = self.isMoving,
-                hitCount = self.hitCount,
-        }
+	return {
+		position = self.position,
+		velocity = self.velocity,
+		isMoving = self.isMoving,
+		hitCount = self.hitCount,
+	}
 end
 
 function BallPhysics:deserialize(data)
-        self.position = data.position
-        self.velocity = data.velocity
-        self.isMoving = data.isMoving
-        self.hitCount = data.hitCount
+	self.position = data.position
+	self.velocity = data.velocity
+	self.isMoving = data.isMoving
+	self.hitCount = data.hitCount
 end
 
 return BallPhysics

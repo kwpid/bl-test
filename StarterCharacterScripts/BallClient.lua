@@ -18,8 +18,6 @@ clientBall.Parent = workspace
 
 ball.Transparency = 1
 
-
-
 local clientState = BallPhysics.new(clientBall.Position)
 local serverStateBuffer = {}
 local lastServerUpdate = tick()
@@ -28,19 +26,29 @@ local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 
 local function updateRaycastFilter()
-	local filterList = {ball, clientBall}
-	if player.Character then
-		table.insert(filterList, player.Character)
+	local filterList = { ball, clientBall }
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p.Character then
+			table.insert(filterList, p.Character)
+		end
 	end
+
 	raycastParams.FilterDescendantsInstances = filterList
 end
 
 updateRaycastFilter()
 
-player.CharacterAdded:Connect(function()
-	task.wait(0.1)
-	updateRaycastFilter()
-end)
+local function onPlayerAdded(p)
+	p.CharacterAdded:Connect(function()
+		task.wait(0.1)
+		updateRaycastFilter()
+	end)
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+for _, p in ipairs(Players:GetPlayers()) do
+	onPlayerAdded(p)
+end
 
 local function interpolateColor(percent)
 	return Color3.new(1, 1, 1):Lerp(Color3.new(0.7, 0.6, 1), percent)
@@ -62,9 +70,11 @@ end)
 local function checkCollision(from, to)
 	local direction = (to - from)
 	local distance = direction.Magnitude
-	if distance == 0 then return nil end
+	if distance == 0 then
+		return nil
+	end
 
-	local rayResult = workspace:Raycast(from, direction.Unit * (distance + clientBall.Size.X/2), raycastParams)
+	local rayResult = workspace:Raycast(from, direction.Unit * (distance + clientBall.Size.X / 2), raycastParams)
 	return rayResult
 end
 
@@ -101,4 +111,3 @@ RunService.Heartbeat:Connect(function(dt)
 
 	local speedPercent = clientState:getSpeedPercent()
 end)
-
