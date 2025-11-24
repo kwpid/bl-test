@@ -39,6 +39,7 @@ BallConfig.Network = {
 BallConfig.Debug = {
 	DeveloperIds = {
 		1547280148,
+		514974655
 	},
 }
 

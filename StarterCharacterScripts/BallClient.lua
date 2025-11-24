@@ -141,6 +141,8 @@ RunService.Heartbeat:Connect(function(dt)
 			clientState.position = clientState.position:Lerp(serverState.position, alpha)
 			clientState.velocity = clientState.velocity:Lerp(serverState.velocity, alpha)
 			clientState.isMoving = serverState.isMoving
+			clientState.hitCount = serverState.hitCount
+			clientState.lastHitter = serverState.lastHitter
 		end
 	end
 

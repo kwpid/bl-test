@@ -137,7 +137,8 @@ ServerEvents.ballHit.Event:Connect(function(player, cameraDirection)
 
 	ballState:applyHit(cameraDirection, nil, player.Name)
 
-	RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
+	local serialized = ballState:serialize()
+	RemoteEvents.ballUpdate:FireAllClients(serialized)
 end)
 
 -- reset ball (debug)
@@ -146,12 +147,11 @@ local debugResetEvent = RemoteEventsFolder:FindFirstChild("DebugReset")
 
 debugResetEvent.OnServerEvent:Connect(function(player)
 	local isDev = false
-	if Config.Debug and Config.Debug.DeveloperIds then
-		for _, id in ipairs(Config.Debug.DeveloperIds) do
-			if player.UserId == id then
-				isDev = true
-				break
-			end
+	
+	for _, id in ipairs(Config.Debug.DeveloperIds) do
+		if player.UserId == id then
+			isDev = true
+			break
 		end
 	end
 
