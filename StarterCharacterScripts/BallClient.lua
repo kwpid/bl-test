@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local BallPhysics = require(ReplicatedStorage.BallPhysics)
 local Config = require(ReplicatedStorage.BallConfig)
@@ -33,6 +34,7 @@ local serverStateBuffer = {}
 local lastServerUpdate = tick()
 
 local debugEnabled = false
+local debugHitboxEnabled = false
 
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -68,6 +70,16 @@ end
 
 updateRaycastFilter()
 
+local function getHitRange()
+	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+		return Config.Parry.MOBILE_RANGE
+	elseif UserInputService.GamepadEnabled then
+		return Config.Parry.CONSOLE_RANGE
+	else
+		return Config.Parry.RANGE
+	end
+end
+
 -- chat command 4 debugs
 TextChatService.SendingMessage:Connect(function(message)
 	local isDev = false
@@ -80,7 +92,7 @@ TextChatService.SendingMessage:Connect(function(message)
 		end
 	end
 
-	if isDev then
+		if isDev then
 		if message.Text == "/debug" then
 			debugEnabled = not debugEnabled
 		elseif message.Text == "/debug:reset" then
@@ -90,10 +102,25 @@ TextChatService.SendingMessage:Connect(function(message)
 			else
 				warn("DebugReset event not found")
 			end
+		elseif message.Text == "/debug:hitbox" then
+			debugHitboxEnabled = not debugHitboxEnabled
+		elseif message.Text == "/debug:freeze" then
+			local debugFreezeEvent = RemoteEventsFolder:WaitForChild("DebugFreeze", 5)
+			if debugFreezeEvent then
+				debugFreezeEvent:FireServer()
+			else
+				warn("DebugFreeze event not found")
+			end
+		elseif message.Text == "/debug:unfreeze" then
+			local debugUnfreezeEvent = RemoteEventsFolder:WaitForChild("DebugUnfreeze", 5)
+			if debugUnfreezeEvent then
+				debugUnfreezeEvent:FireServer()
+			else
+				warn("DebugUnfreeze event not found")
+			end
 		end
 	end
 end)
-
 local function interpolateColor(percent)
 	return Color3.new(1, 1, 1):Lerp(Color3.new(0.7, 0.6, 1), percent)
 end
@@ -162,30 +189,76 @@ RunService.Heartbeat:Connect(function(dt)
 	if not debugGui then
 		debugGui = Instance.new("BillboardGui")
 		debugGui.Name = "DebugGui"
-		debugGui.Size = UDim2.new(0, 200, 0, 50)
-		debugGui.StudsOffset = Vector3.new(0, 3, 0)
+		debugGui.Size = UDim2.new(0, 400, 0, 150)
+		debugGui.StudsOffset = Vector3.new(0, 4, 0)
 		debugGui.AlwaysOnTop = true
 		debugGui.Parent = clientBall
 
 		local textLabel = Instance.new("TextLabel")
+		textLabel.Name = "TextLabel"
 		textLabel.Size = UDim2.new(1, 0, 1, 0)
 		textLabel.BackgroundTransparency = 1
 		textLabel.TextColor3 = Color3.new(1, 1, 1)
 		textLabel.TextStrokeTransparency = 0
-		textLabel.TextScaled = true
+		textLabel.Font = Enum.Font.Code
+		textLabel.TextSize = 18
+		textLabel.TextXAlignment = Enum.TextXAlignment.Left
+		textLabel.TextYAlignment = Enum.TextYAlignment.Top
 		textLabel.Parent = debugGui
 	end
 
 	local groundHeight = getGroundHeight(clientState.position)
 	local heightOffFloat = clientState.position.Y - (groundHeight + Config.Physics.FLOAT_HEIGHT)
-	debugGui.TextLabel.Text = string.format(
-		"Speed: %.1f\nHeight: %.1f\nHits: %d\nLast: %s",
+	local maxSpeed = Config.Physics.BASE_SPEED + clientState.hitCount * Config.Physics.SPEED_INCREMENT
+	maxSpeed = math.min(maxSpeed, Config.Physics.MAX_SPEED)
+	local verticalSpeed = clientState.velocity.Y
+
+	local debugText = string.format(
+		"VELOCITY          POSITION\n"
+			.. "Speed: %.1f       Height: %.1f\n"
+			.. "Vert:  %.1f       \n\n"
+			.. "STATS             INFO\n"
+			.. "Hits:  %d         Last: %s\n"
+			.. "Max:   %.1f",
 		clientState.velocity.Magnitude,
 		heightOffFloat,
+		verticalSpeed,
 		clientState.hitCount,
-		clientState.lastHitter or "None"
+		clientState.lastHitter or "None",
+		maxSpeed
 	)
+
+	if clientState.isFrozen and debugEnabled then
+		debugText = "FROZEN\n\n" .. debugText
+	end
+
+	debugGui.TextLabel.Text = debugText
 	debugGui.Enabled = debugEnabled
+
+	local hitboxPart = workspace:FindFirstChild("DebugHitbox_" .. player.UserId)
+	if debugHitboxEnabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+		if not hitboxPart then
+			hitboxPart = Instance.new("Part")
+			hitboxPart.Name = "DebugHitbox_" .. player.UserId
+			hitboxPart.Shape = Enum.PartType.Ball
+			hitboxPart.Anchored = true
+			hitboxPart.CanCollide = false
+			hitboxPart.CanQuery = false
+			hitboxPart.CanTouch = false
+			hitboxPart.Transparency = 0.85
+			hitboxPart.Material = Enum.Material.Neon
+			hitboxPart.Color = Color3.new(1, 0, 0)
+			hitboxPart.Size = Vector3.new(1, 1, 1)
+			hitboxPart.Parent = workspace
+		end
+
+		local hitRange = getHitRange()
+		hitboxPart.Size = Vector3.new(hitRange * 2, hitRange * 2, hitRange * 2)
+		hitboxPart.CFrame = player.Character.HumanoidRootPart.CFrame
+	elseif hitboxPart then
+		hitboxPart:Destroy()
+	end	
+
 
 	local debugParts = debugFolder:GetChildren()
 	local partIndex = 1

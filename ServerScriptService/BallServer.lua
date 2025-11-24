@@ -39,6 +39,8 @@ ball.Position = spawnPosition
 
 local lastGroundCheck = 0
 local lastNetworkUpdate = 0
+local ballFrozen = false
+local frozenVelocity = Vector3.new(0, 0, 0)
 
 local function updateRaycastFilter()
 	local filterList = { ball }
@@ -95,6 +97,10 @@ end
 local currentGroundHeight = 0
 
 RunService.Heartbeat:Connect(function(dt)
+	if ballFrozen then
+		return
+	end
+
 	lastGroundCheck = lastGroundCheck + dt
 	if lastGroundCheck > 0.1 then
 		currentGroundHeight = getGroundHeight(ballState.position)
@@ -138,6 +144,7 @@ ServerEvents.ballHit.Event:Connect(function(player, cameraDirection)
 	ballState:applyHit(cameraDirection, nil, player.Name)
 
 	local serialized = ballState:serialize()
+
 	RemoteEvents.ballUpdate:FireAllClients(serialized)
 end)
 
@@ -147,7 +154,7 @@ local debugResetEvent = RemoteEventsFolder:FindFirstChild("DebugReset")
 
 debugResetEvent.OnServerEvent:Connect(function(player)
 	local isDev = false
-	
+
 	for _, id in ipairs(Config.Debug.DeveloperIds) do
 		if player.UserId == id then
 			isDev = true
@@ -162,5 +169,42 @@ debugResetEvent.OnServerEvent:Connect(function(player)
 		ball.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
 
 		RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
+	end
+end)
+
+-- freeze ball (debug)
+local debugFreezeEvent = RemoteEventsFolder:FindFirstChild("DebugFreeze")
+
+
+debugFreezeEvent.OnServerEvent:Connect(function(player)
+	local isDev = false
+	for _, id in ipairs(Config.Debug.DeveloperIds) do
+		if player.UserId == id then
+			isDev = true
+			break
+		end
+	end
+
+	if isDev then
+		ballFrozen = true
+		frozenVelocity = ballState.velocity
+	end
+end)
+
+-- unfreeze ball (debug)
+local debugUnfreezeEvent = RemoteEventsFolder:FindFirstChild("DebugUnfreeze")
+
+debugUnfreezeEvent.OnServerEvent:Connect(function(player)
+	local isDev = false
+	for _, id in ipairs(Config.Debug.DeveloperIds) do
+		if player.UserId == id then
+			isDev = true
+			break
+		end
+	end
+
+	if isDev then
+		ballFrozen = false
+		ballState.velocity = frozenVelocity
 	end
 end)

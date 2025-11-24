@@ -72,6 +72,7 @@ end)
 
 UserInputService.JumpRequest:Connect(function()
 	if UserInputService:GetLastInputType() == Enum.UserInputType.Touch then
+		task.wait(0.05)
 		tryDoubleJump()
 	end
 end)
