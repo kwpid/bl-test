@@ -32,11 +32,7 @@ local function getGroundHeightInitial(position)
 end
 
 local initialGroundHeight = getGroundHeightInitial(ball.Position)
-local spawnPosition = Vector3.new(
-	ball.Position.X,
-	initialGroundHeight + Config.Physics.FLOAT_HEIGHT,
-	ball.Position.Z
-)
+local spawnPosition = Vector3.new(ball.Position.X, initialGroundHeight + Config.Physics.FLOAT_HEIGHT, ball.Position.Z)
 
 local ballState = BallPhysics.new(spawnPosition)
 ball.Position = spawnPosition
@@ -88,7 +84,9 @@ end
 local function checkCollision(from, to)
 	local direction = (to - from)
 	local distance = direction.Magnitude
-	if distance == 0 then return nil end
+	if distance == 0 then
+		return nil
+	end
 
 	local rayResult = workspace:Raycast(from, direction.Unit * (distance + ball.Size.X / 2), raycastParams)
 	return rayResult
@@ -137,8 +135,32 @@ ServerEvents.ballHit.Event:Connect(function(player, cameraDirection)
 
 	lastHitTime = currentTime
 
-	ballState:applyHit(cameraDirection)
+	ballState:applyHit(cameraDirection, nil, player.Name)
 
 	RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
 end)
 
+-- reset ball (debug)
+local debugResetEvent = RemoteEventsFolder:FindFirstChild("DebugReset")
+
+
+debugResetEvent.OnServerEvent:Connect(function(player)
+	local isDev = false
+	if Config.Debug and Config.Debug.DeveloperIds then
+		for _, id in ipairs(Config.Debug.DeveloperIds) do
+			if player.UserId == id then
+				isDev = true
+				break
+			end
+		end
+	end
+
+	if isDev then
+		ballState = BallPhysics.new(spawnPosition)
+		ball.Position = spawnPosition
+		ball.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+		ball.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+
+		RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
+	end
+end)

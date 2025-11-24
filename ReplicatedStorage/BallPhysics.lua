@@ -7,6 +7,7 @@ function BallPhysics.new(initialPosition)
 		velocity = Vector3.new(0, 0, 0),
 		isMoving = false,
 		hitCount = 0,
+		lastHitter = "None",
 	}
 
 	setmetatable(self, { __index = BallPhysics })
@@ -15,6 +16,9 @@ end
 
 function BallPhysics:applyHit(direction, customSpeed)
 	self.hitCount = self.hitCount + 1
+	if hitterName then
+		self.lastHitter = hitterName
+	end
 
 	local speed = customSpeed or (Config.Physics.BASE_SPEED + (self.hitCount - 1) * Config.Physics.SPEED_INCREMENT)
 	speed = math.min(speed, Config.Physics.MAX_SPEED)
@@ -80,6 +84,10 @@ function BallPhysics:update(dt, raycastFunc, groundHeight)
 				self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z) * 0.95
 				self.position = Vector3.new(nextPosition.X, bounceHeight, nextPosition.Z)
 			end
+
+			if onCollision then
+				onCollision()
+			end
 			break
 		end
 
@@ -98,6 +106,10 @@ function BallPhysics:update(dt, raycastFunc, groundHeight)
 				if self.velocity.Magnitude < 2 then
 					self.velocity = Vector3.new(0, 0, 0)
 					self.isMoving = false
+				end
+
+				if onCollision then
+					onCollision(collision)
 				end
 				break
 			else
@@ -139,6 +151,7 @@ function BallPhysics:serialize()
 		velocity = self.velocity,
 		isMoving = self.isMoving,
 		hitCount = self.hitCount,
+		hitCount = self.hitCount,
 	}
 end
 
@@ -147,6 +160,7 @@ function BallPhysics:deserialize(data)
 	self.velocity = data.velocity
 	self.isMoving = data.isMoving
 	self.hitCount = data.hitCount
+	self.lastHitter = data.lastHitter or "None"
 end
 
 return BallPhysics

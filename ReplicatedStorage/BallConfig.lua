@@ -36,4 +36,10 @@ BallConfig.Network = {
 	INTERPOLATION_DELAY = 0.1,
 }
 
+BallConfig.Debug = {
+	DeveloperIds = {
+		1547280148,
+	},
+}
+
 return BallConfig
