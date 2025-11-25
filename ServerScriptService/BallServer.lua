@@ -107,7 +107,7 @@ RunService.Heartbeat:Connect(function(dt)
 		lastGroundCheck = 0
 	end
 
-	local updated = ballState:update(dt, checkCollision, currentGroundHeight)
+	local updated = ballState:update(dt, checkCollision, currentGroundHeight, ball.Size.X / 2)
 
 	ballState:enforceFloatHeight(currentGroundHeight)
 

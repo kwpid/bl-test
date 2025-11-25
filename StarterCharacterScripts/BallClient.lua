@@ -11,6 +11,8 @@ local ballUpdateEvent = RemoteEventsFolder:WaitForChild("BallUpdateEvent")
 local player = Players.LocalPlayer
 local ball = workspace:WaitForChild("Ball")
 
+
+
 local clientBall = ball:Clone()
 clientBall.Name = "ClientBall"
 clientBall.Transparency = 0
@@ -19,7 +21,6 @@ clientBall.Parent = workspace
 
 ball.Transparency = 1
 
--- Create Debug Folder early
 local debugFolder = workspace:FindFirstChild("BallDebug")
 if not debugFolder then
 	debugFolder = Instance.new("Folder")
@@ -33,8 +34,13 @@ local clientState = BallPhysics.new(clientBall.Position)
 local serverStateBuffer = {}
 local lastServerUpdate = tick()
 
+
+
 local debugEnabled = false
 local debugHitboxEnabled = false
+local balLCamEnabled = false
+local originalCameraSubject = nil
+
 
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -42,7 +48,6 @@ raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 local function updateRaycastFilter()
 	local filterList = { ball, clientBall }
 
-	-- Add debug folder to filter (backup, though CanQuery=false should handle it)
 	if debugFolder then
 		table.insert(filterList, debugFolder)
 	end
@@ -118,9 +123,24 @@ TextChatService.SendingMessage:Connect(function(message)
 			else
 				warn("DebugUnfreeze event not found")
 			end
+		elseif message.Text == "/ballcam" then
+			ballCamEnabled = not ballCamEnabled
+			local camera = workspace.CurrentCamera
+
+			if ballCamEnabled then
+				originalCameraSubject = camera.CameraSubject
+				camera.CameraSubject = clientBall
+				camera.CameraType = Enum.CameraType.Follow
+			else
+				if originalCameraSubject then
+					camera.CameraSubject = originalCameraSubject
+				end
+				camera.CameraType = Enum.CameraType.Custom
+			end
 		end
 	end
 end)
+
 local function interpolateColor(percent)
 	return Color3.new(1, 1, 1):Lerp(Color3.new(0.7, 0.6, 1), percent)
 end
@@ -161,26 +181,44 @@ RunService.Heartbeat:Connect(function(dt)
 		local serverState = serverStateBuffer[#serverStateBuffer].state
 
 		local positionDiff = (serverState.position - clientState.position).Magnitude
-		if positionDiff > 5 then
+		if positionDiff > 8 then
 			clientState:deserialize(serverState)
 		else
-			local alpha = math.clamp(dt * 10, 0, 1)
-			clientState.position = clientState.position:Lerp(serverState.position, alpha)
-			clientState.velocity = clientState.velocity:Lerp(serverState.velocity, alpha)
+			local velocityDiff = (serverState.velocity - clientState.velocity).Magnitude
+			local isHit = velocityDiff > 20
+
+			if isHit then
+				clientState.velocity = serverState.velocity
+				local alpha = math.clamp(dt * 20, 0, 0.6)
+				clientState.position = clientState.position:Lerp(serverState.position, alpha)
+			else
+				local alpha = math.clamp(dt * 12, 0, 0.5)
+
+				clientState.position = clientState.position:Lerp(serverState.position, alpha)
+				clientState.velocity = clientState.velocity:Lerp(serverState.velocity, alpha * 0.8)
+			end
+
 			clientState.isMoving = serverState.isMoving
 			clientState.hitCount = serverState.hitCount
 			clientState.lastHitter = serverState.lastHitter
 		end
 	end
 
-	if tick() - lastServerUpdate < 0.5 then
+	if tick() - lastServerUpdate < 1.0 then
 		local groundHeight = getGroundHeight(clientState.position)
-		clientState:update(dt, checkCollision, groundHeight)
+		clientState:update(dt, checkCollision, groundHeight, clientBall.Size.X / 2)
 
 		clientState:enforceFloatHeight(groundHeight)
 	end
-
 	clientBall.Position = clientState.position
+
+	if ballCamEnabled then
+		local camera = workspace.CurrentCamera
+		if camera.CameraSubject ~= clientBall then
+			camera.CameraSubject = clientBall
+			camera.CameraType = Enum.CameraType.Follow
+		end
+	end
 
 	local speedPercent = clientState:getSpeedPercent()
 
@@ -209,7 +247,13 @@ RunService.Heartbeat:Connect(function(dt)
 
 	local groundHeight = getGroundHeight(clientState.position)
 	local heightOffFloat = clientState.position.Y - (groundHeight + Config.Physics.FLOAT_HEIGHT)
-	local maxSpeed = Config.Physics.BASE_SPEED + clientState.hitCount * Config.Physics.SPEED_INCREMENT
+	local maxSpeed
+	if clientState.hitCount == 0 then
+		maxSpeed = Config.Physics.BASE_SPEED
+	else
+		maxSpeed = Config.Physics.START_SPEED + (clientState.hitCount - 1) * Config.Physics.SPEED_INCREMENT
+	end
+
 	maxSpeed = math.min(maxSpeed, Config.Physics.MAX_SPEED)
 	local verticalSpeed = clientState.velocity.Y
 
@@ -314,7 +358,7 @@ RunService.Heartbeat:Connect(function(dt)
 			local collisionCount = 0
 			local maxCollisions = 10 
 			local simDt = 1 / 60
-			local maxSteps = 300 
+			local maxSteps = 1200 
 
 			local points = { ghostState.position }
 
@@ -324,10 +368,16 @@ RunService.Heartbeat:Connect(function(dt)
 				end
 
 				local collided = false
-				ghostState:update(simDt, checkCollision, getGroundHeight(ghostState.position), function()
-					collided = true
-					collisionCount = collisionCount + 1
-				end)
+				ghostState:update(
+					simDt,
+					checkCollision,
+					getGroundHeight(ghostState.position),
+					clientBall.Size.X / 2,
+					function()
+						collided = true
+						collisionCount = collisionCount + 1
+					end
+				)
 
 				if i % 2 == 0 then
 					table.insert(points, ghostState.position)

@@ -8,19 +8,32 @@ function BallPhysics.new(initialPosition)
 		isMoving = false,
 		hitCount = 0,
 		lastHitter = "None",
+		bounceCount = 0,
 	}
 
 	setmetatable(self, { __index = BallPhysics })
 	return self
 end
 
-function BallPhysics:applyHit(direction, customSpeed)
+function BallPhysics:applyHit(direction, customSpeed, hitterName)
 	self.hitCount = self.hitCount + 1
 	if hitterName then
 		self.lastHitter = hitterName
 	end
 
-	local speed = customSpeed or (Config.Physics.BASE_SPEED + (self.hitCount - 1) * Config.Physics.SPEED_INCREMENT)
+	self.bounceCount = 0
+
+	local speed
+	if customSpeed then
+		speed = customSpeed
+	else
+		if self.hitCount == 1 then
+			speed = Config.Physics.START_SPEED
+		else
+			speed = Config.Physics.START_SPEED + (self.hitCount - 1) * Config.Physics.SPEED_INCREMENT
+		end
+	end
+
 	speed = math.min(speed, Config.Physics.MAX_SPEED)
 
 	self.velocity = direction.Unit * speed
@@ -29,7 +42,8 @@ function BallPhysics:applyHit(direction, customSpeed)
 	return speed
 end
 
-function BallPhysics:update(dt, raycastFunc, groundHeight)
+function BallPhysics:update(dt, raycastFunc, groundHeight, radius, onCollision)
+	radius = radius or 2
 	if not self.isMoving then
 		return false
 	end
@@ -63,7 +77,7 @@ function BallPhysics:update(dt, raycastFunc, groundHeight)
 		local nextPosition = self.position + stepVector
 		local bounceHeight = groundHeight + Config.Physics.FLOAT_HEIGHT
 		local crossedFloorPlane = nextPosition.Y <= bounceHeight and self.velocity.Y < -1
-                
+
 		if crossedFloorPlane then
 			local currentSpeed = self.velocity.Magnitude
 			local velocityDirection = self.velocity.Unit
@@ -71,18 +85,20 @@ function BallPhysics:update(dt, raycastFunc, groundHeight)
 
 			local shouldBounce = false
 
-			if impactAngle >= Config.Physics.MIN_BOUNCE_ANGLE then
+			if impactAngle >= Config.Physics.MIN_BOUNCE_ANGLE and currentSpeed >= Config.Physics.MIN_BOUNCE_SPEED and self.bounceCount < Config.Physics.MAX_BOUNCES then
 				shouldBounce = true
 			end
 
 			if shouldBounce then
 				local normal = Vector3.new(0, 1, 0)
 				local reflectedVelocity = self.velocity - 2 * self.velocity:Dot(normal) * normal
-				self.velocity = reflectedVelocity * Config.Physics.BOUNCE_ENERGY_LOSS
+				self.velocity = reflectedVelocity * Config.Physics.GROUND_BOUNCE_ENERGY_LOSS
 				self.position = Vector3.new(nextPosition.X, bounceHeight, nextPosition.Z)
+				self.bounceCount = self.bounceCount + 1
 			else
 				self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z) * 0.95
 				self.position = Vector3.new(nextPosition.X, bounceHeight, nextPosition.Z)
+				self.bounceCount = 0
 			end
 
 			if onCollision then
@@ -97,8 +113,14 @@ function BallPhysics:update(dt, raycastFunc, groundHeight)
 			if collision then
 				local normal = collision.Normal
 				local reflectedVelocity = self.velocity - 2 * self.velocity:Dot(normal) * normal
-				self.velocity = reflectedVelocity * Config.Physics.BOUNCE_ENERGY_LOSS
-				self.position = collision.Position + (normal * 1.2)
+				self.velocity = reflectedVelocity
+				local distanceTraveled = (collision.Position - self.position).Magnitude
+				local remainingDistance = math.max(0, stepVector.Magnitude - distanceTraveled)
+				self.position = collision.Position
+					+ (normal * radius)
+					+ (reflectedVelocity.Unit * remainingDistance)
+					+ (normal * 0.01)
+
 				if self.position.Y < bounceHeight then
 					self.position = Vector3.new(self.position.X, bounceHeight, self.position.Z)
 				end
@@ -150,7 +172,6 @@ function BallPhysics:serialize()
 		position = self.position,
 		velocity = self.velocity,
 		isMoving = self.isMoving,
-		hitCount = self.hitCount,
 		hitCount = self.hitCount,
 	}
 end

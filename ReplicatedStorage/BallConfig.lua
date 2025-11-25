@@ -7,16 +7,20 @@ BallConfig.Paths = {
 
 BallConfig.Physics = {
 	FLOAT_HEIGHT = 2.5,
-	BASE_SPEED = 10,
-	SPEED_INCREMENT = 7,
+	BASE_SPEED = 50,
+	START_SPEED = 50,
+	SPEED_INCREMENT = 3,
 	MAX_SPEED = 200,
 	DECELERATION = 0.998,
 	MIN_SPEED = 10,
 	BOUNCE_ENERGY_LOSS = 0.8,
 	GRAVITY = 0.3,
-	GRAVITY_THRESHOLD = 30,
+	GRAVITY_THRESHOLD = 999,
 
 	MIN_BOUNCE_ANGLE = 45,
+	MIN_BOUNCE_SPEED = 30,
+	MAX_BOUNCES = 2,
+	GROUND_BOUNCE_ENERGY_LOSS = 0.9,
 }
 
 BallConfig.Parry = {
@@ -39,7 +43,8 @@ BallConfig.Network = {
 BallConfig.Debug = {
 	DeveloperIds = {
 		1547280148,
-		514974655
+		514974655,
+		7211594503
 	},
 }
 
