@@ -9,6 +9,8 @@ function BallPhysics.new(initialPosition)
 		hitCount = 0,
 		lastHitter = "None",
 		bounceCount = 0,
+		color = Color3.new(1, 1, 1),
+		transparency = 0,
 	}
 
 	setmetatable(self, { __index = BallPhysics })
@@ -149,12 +151,10 @@ function BallPhysics:enforceFloatHeight(groundHeight)
 	local targetHeight = groundHeight + Config.Physics.FLOAT_HEIGHT
 
 	if self.position.Y < targetHeight then
-		if not self.isMoving or math.abs(self.velocity.Y) < 0.5 then
-			self.position = Vector3.new(self.position.X, targetHeight, self.position.Z)
+		self.position = Vector3.new(self.position.X, targetHeight, self.position.Z)
 
-			if self.isMoving and self.velocity.Y < 0 then
-				self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z)
-			end
+		if self.velocity.Y < 0 then
+			self.velocity = Vector3.new(self.velocity.X, 0, self.velocity.Z)
 		end
 	end
 end
@@ -173,6 +173,9 @@ function BallPhysics:serialize()
 		velocity = self.velocity,
 		isMoving = self.isMoving,
 		hitCount = self.hitCount,
+		color = self.color,
+		transparency = self.transparency or 0,
+		lastHitter = self.lastHitter or "None",
 	}
 end
 
@@ -182,6 +185,10 @@ function BallPhysics:deserialize(data)
 	self.isMoving = data.isMoving
 	self.hitCount = data.hitCount
 	self.lastHitter = data.lastHitter or "None"
+	self.transparency = data.transparency or 0
+	if data.color then
+		self.color = data.color
+	end
 end
 
 return BallPhysics

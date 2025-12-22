@@ -9,17 +9,34 @@ local Config = require(ReplicatedStorage.BallConfig)
 local RemoteEventsFolder = ReplicatedStorage:WaitForChild(Config.Paths.REMOTE_EVENTS_FOLDER)
 local ballUpdateEvent = RemoteEventsFolder:WaitForChild("BallUpdateEvent")
 local player = Players.LocalPlayer
-local ball = workspace:WaitForChild("Ball")
+local ball = workspace:FindFirstChild("Ball")
+if not ball then
+	-- Wait for the ball to be spawned by the server
+	ball = workspace:WaitForChild("Ball", 30)
+end
+
+if not ball then
+	error("Ball not found in Workspace after waiting! Ensure BallServer.lua is correctly spawning it.")
+end
 
 
+
+-- Clean up old local ball if it exists
+for _, child in ipairs(workspace:GetChildren()) do
+	if child.Name == "ClientBall" and child:IsA("BasePart") then
+		child:Destroy()
+	end
+end
 
 local clientBall = ball:Clone()
 clientBall.Name = "ClientBall"
 clientBall.Transparency = 0
 clientBall.CanCollide = false
+clientBall.Anchored = true -- Script handles movement
 clientBall.Parent = workspace
 
 ball.Transparency = 1
+ball.Anchored = true -- Ensure server ball is also anchored
 
 local debugFolder = workspace:FindFirstChild("BallDebug")
 if not debugFolder then
@@ -201,6 +218,14 @@ RunService.Heartbeat:Connect(function(dt)
 			clientState.isMoving = serverState.isMoving
 			clientState.hitCount = serverState.hitCount
 			clientState.lastHitter = serverState.lastHitter
+			if serverState.color and serverState.color ~= clientState.color then
+				print("COLOR SYNC: Server=" .. tostring(serverState.color) .. " Client=" .. tostring(clientState.color))
+				clientState.color = serverState.color
+			end
+			if serverState.transparency ~= nil and serverState.transparency ~= clientState.transparency then
+				print("TRANSPARENCY SYNC: Server=" .. tostring(serverState.transparency) .. " Client=" .. tostring(clientState.transparency))
+				clientState.transparency = serverState.transparency
+			end
 		end
 	end
 
@@ -211,6 +236,19 @@ RunService.Heartbeat:Connect(function(dt)
 		clientState:enforceFloatHeight(groundHeight)
 	end
 	clientBall.Position = clientState.position
+	clientBall.Color = clientState.color
+	clientBall.Transparency = clientState.transparency or 0
+	
+	-- Update LastTeam attribute on client ball
+	if clientState.lastHitter and clientState.lastHitter ~= "None" then
+		local lastHitterPlayer = Players:FindFirstChild(clientState.lastHitter)
+		if lastHitterPlayer then
+			local team = lastHitterPlayer:GetAttribute("Team")
+			if team then
+				clientBall:SetAttribute("LastTeam", team)
+			end
+		end
+	end
 
 	if ballCamEnabled then
 		local camera = workspace.CurrentCamera

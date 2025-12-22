@@ -9,8 +9,10 @@ local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
 
+local Config = require(ReplicatedStorage:WaitForChild("BallConfig"))
+local RemoteEventsFolder = ReplicatedStorage:WaitForChild(Config.Paths.REMOTE_EVENTS_FOLDER)
+local doubleJumpEvent = RemoteEventsFolder:WaitForChild("DoubleJumpEvent")
 local jumpEffectTemplate = ReplicatedStorage:WaitForChild("JumpEffect")
-local doubleJumpEvent = ReplicatedStorage.RemoteEvents:WaitForChild("DoubleJumpEvent")
 
 local hasDoubleJumped = false
 

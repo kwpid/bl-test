@@ -17,9 +17,13 @@ local RemoteEvents = {
         deviceType = RemoteEventsFolder:WaitForChild("DeviceTypeEvent"),
 }
 
-local ServerEvents = {
-        ballHit = RemoteEventsFolder:WaitForChild("ServerBallHit"),
-}
+local ServerEvents = {}
+ServerEvents.ballHit = RemoteEventsFolder:FindFirstChild("ServerBallHit")
+if not ServerEvents.ballHit then
+	ServerEvents.ballHit = Instance.new("BindableEvent")
+	ServerEvents.ballHit.Name = "ServerBallHit"
+	ServerEvents.ballHit.Parent = RemoteEventsFolder
+end
 
 local playerData = {}
 local ballHitImmunity = {}
@@ -38,6 +42,12 @@ local function cloneAttachment(parent, template, name)
 end
 
 local function equipSword(character, swordModel)
+        -- Cleanup existing sword
+        local existing = character:FindFirstChild("HipSword")
+        if existing then existing:Destroy() end
+        local existingWeld = character:FindFirstChild("Torso") and character.Torso:FindFirstChild("SwordWeld")
+        if existingWeld then existingWeld:Destroy() end
+
         local torso = character:FindFirstChild("Torso")
         local rightArm = character:FindFirstChild("Right Arm")
         if not torso or not rightArm then return end
@@ -124,6 +134,7 @@ local function createParryWindow(player, character, animator, animations, weld, 
                 end
                 
                 local distance = (hrp.Position - ball.Position).Magnitude
+                print(string.format("SwordServer: Player %s HRB pos: %s, Ball pos: %s, Dist: %.2f, Range: %.2f", player.Name, tostring(hrp.Position), tostring(ball.Position), distance, parryWindow.parryRange))
                 
                 if distance <= parryWindow.parryRange then
                         parryWindow.hitBall = true
@@ -141,6 +152,7 @@ local function createParryWindow(player, character, animator, animations, weld, 
                         parryTrack:Play()
                         
                         task.wait(0.05)
+                        print("SwordServer: Firing ballHit for player:", player.Name)
                         ServerEvents.ballHit:Fire(player, parryWindow.cameraDirection)
                         
                         parryTrack.Stopped:Connect(function()
@@ -263,11 +275,34 @@ RemoteEvents.swing.OnServerEvent:Connect(onSwing)
 RemoteEvents.deviceType.OnServerEvent:Connect(onDeviceType)
 
 local function onCharacterAdded(character)
-        local swordModel = SWORD_FOLDER:FindFirstChild(DEFAULT_SWORD_NAME)
+        local player = Players:GetPlayerFromCharacter(character)
+        if not player then return end
+
+        local equippedName = "DefaultSword"
+        if _G.DataService then
+                equippedName = _G.DataService.GetEquippedSword(player)
+        end
+
+        local swordModel = SWORD_FOLDER:FindFirstChild(equippedName)
         if swordModel then
                 task.wait(0.5)
                 equipSword(character, swordModel)
         end
+
+        -- Listen for dynamic changes
+        character:GetAttributeChangedSignal("EquippedSword"):Connect(function()
+                local newSwordName = character:GetAttribute("EquippedSword")
+                if newSwordName and newSwordName ~= "None" then
+                        local model = SWORD_FOLDER:FindFirstChild(newSwordName)
+                        if model then
+                                equipSword(character, model)
+                        end
+                else
+                        -- Unequip
+                        local existing = character:FindFirstChild("HipSword")
+                        if existing then existing:Destroy() end
+                end
+        end)
 end
 
 local function onPlayerAdded(player)

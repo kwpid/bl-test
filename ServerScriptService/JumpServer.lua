@@ -1,6 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local doubleJumpEvent = ReplicatedStorage.RemoteEvents:WaitForChild("DoubleJumpEvent")
+local Config = require(ReplicatedStorage:WaitForChild("BallConfig"))
+local RemoteEventsFolder = ReplicatedStorage:WaitForChild(Config.Paths.REMOTE_EVENTS_FOLDER)
+local doubleJumpEvent = RemoteEventsFolder:WaitForChild("DoubleJumpEvent")
 local jumpEffect = ReplicatedStorage:FindFirstChild("JumpEffect")
 
 doubleJumpEvent.OnServerEvent:Connect(function(player)
