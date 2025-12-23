@@ -37,11 +37,14 @@ setupTeams()
 local ModulesFolder = ReplicatedStorage.Modules
 local BallConfig = require(ReplicatedStorage:WaitForChild("BallConfig"))
 local MapManager = require(ReplicatedStorage:WaitForChild("MapManager"))
+local DataService = require(ServerScriptService:WaitForChild("DataService"))
 local RemoteEventsFolder = ReplicatedStorage:WaitForChild(BallConfig.Paths.REMOTE_EVENTS_FOLDER)
 local ResetBallEvent = RemoteEventsFolder:WaitForChild("ResetBall")
 local GoalScoredEvent = RemoteEventsFolder:WaitForChild("GoalScored")
 
 local Zones = require(ModulesFolder.Zone)
+
+local ServerScriptService = game:GetService("ServerScriptService")
 
 local MapContainer = workspace:WaitForChild("Stage")
 
@@ -242,7 +245,26 @@ function GameInstance:EndGame(reason)
         
         self:SetGameUIVisibility(false)
         
-        for _, p in ipairs(self.Players) do
+        local winningTeam = nil
+        if self.Scores.red > self.Scores.blue then
+                winningTeam = "red"
+        elseif self.Scores.blue > self.Scores.red then
+                winningTeam = "blue"
+        end
+        
+        for i, p in ipairs(self.Players) do
+                local playerTeam = p:GetAttribute("Team")
+                
+                if winningTeam and playerTeam == winningTeam then
+                        DataService.AddWin(p)
+                        DataService.AddXP(p, 100)
+                elseif winningTeam then
+                        DataService.AddLoss(p)
+                        DataService.AddXP(p, 20)
+                else
+                        DataService.AddXP(p, 40)
+                end
+                
                 p:SetAttribute("GameId", nil)
                 p:SetAttribute("Team", nil)
                 p.Team = Teams:FindFirstChild("Lobby")
@@ -557,6 +579,12 @@ GoalScoredEvent.Event:Connect(function(team, gameId, hitterName)
                 if team == "blue" then gameInst.Scores.blue = gameInst.Scores.blue + 1 end
                 gameInst:UpdateScoreUI()
                 gameInst:ShowGoalUI(hitterName)
+                
+                local hitPlayer = Players:FindFirstChild(hitterName)
+                if hitPlayer then
+                        DataService.AddGoal(hitPlayer)
+                        DataService.AddXP(hitPlayer, 25)
+                end
                 
                 if gameInst.IsOvertime or gameInst.RemainingTime <= 0 then
                         task.wait(2)
