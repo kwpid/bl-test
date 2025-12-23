@@ -119,11 +119,17 @@ function BallPhysics:update(dt, raycastFunc, groundHeight, radius, onCollision)
 				self.velocity = reflectedVelocity
 				local distanceTraveled = (collision.Position - self.position).Magnitude
 				local remainingDistance = math.max(0, stepVector.Magnitude - distanceTraveled)
+<<<<<<< HEAD
+=======
+				-- CRITICAL FIX: Clamp remaining distance to prevent ball teleporting on collision
+				-- When hitting walls (especially back-of-net hitboxes), large remaining distances
+				-- cause the ball to move excessively far. Cap it at 2x the ball radius.
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 				remainingDistance = math.min(remainingDistance, radius * 2)
 				self.position = collision.Position
-					+ (normal * radius)
-					+ (reflectedVelocity.Unit * remainingDistance)
-					+ (normal * 0.01)
+						+ (normal * radius)
+						+ (reflectedVelocity.Unit * remainingDistance)
+						+ (normal * 0.01)
 
 				if self.position.Y < bounceHeight then
 					self.position = Vector3.new(self.position.X, bounceHeight, self.position.Z)

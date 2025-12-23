@@ -52,7 +52,15 @@ local SWORD_DEFINITIONS = {
 local function calculateLevelFromXP(xp)
 	local level = 1
 	local cumulativeXP = 0
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
+========
+	
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+	
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	while true do
 		local xpForNextLevel = level * 100
 		if cumulativeXP + xpForNextLevel > xp then
@@ -61,7 +69,15 @@ local function calculateLevelFromXP(xp)
 		cumulativeXP = cumulativeXP + xpForNextLevel
 		level = level + 1
 	end
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
+========
+	
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+	
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	return level
 end
 
@@ -89,7 +105,15 @@ end
 
 local function loadData(player)
 	local userId = player.UserId
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
+========
+	
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+	
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	local success, data = pcall(function()
 		return InventoryDataStore:GetAsync(tostring(userId))
 	end)
@@ -105,7 +129,15 @@ local function loadData(player)
 
 	local STARTER_ITEMS = { "DefaultSword", "Dark Scythe" }
 	local inventory = sessionData[userId].Inventory
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
+========
+	
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+	
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	local ownedItems = {}
 	for _, item in ipairs(inventory) do
 		ownedItems[item.Name] = true
@@ -123,11 +155,25 @@ local function loadData(player)
 	if #sessionData[userId].Equipped == 0 then
 		table.insert(sessionData[userId].Equipped, "DefaultSword")
 	end
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
 	local statsSuccess, statsData = pcall(function()
 		return StatsDataStore:GetAsync(tostring(userId))
 	end)
 
+========
+=======
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
+	
+	local statsSuccess, statsData = pcall(function()
+		return StatsDataStore:GetAsync(tostring(userId))
+	end)
+	
+<<<<<<< HEAD
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	if statsSuccess and statsData then
 		sessionData[userId].Stats = statsData
 	else
@@ -140,6 +186,8 @@ local function loadData(player)
 			TotalGoals = 0,
 		}
 	end
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
@@ -148,16 +196,47 @@ local function loadData(player)
 	local stats = sessionData[userId].Stats
 	local level = calculateLevelFromXP(stats.XP)
 
+========
+=======
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
+	
+	local leaderstats = Instance.new("Folder")
+	leaderstats.Name = "leaderstats"
+	leaderstats.Parent = player
+	
+	local stats = sessionData[userId].Stats
+	local level = calculateLevelFromXP(stats.XP)
+	
+<<<<<<< HEAD
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	local wins = Instance.new("IntValue")
 	wins.Name = "Wins"
 	wins.Value = stats.Wins
 	wins.Parent = leaderstats
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
+========
+	
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+	
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	local winStreak = Instance.new("IntValue")
 	winStreak.Name = "Win Streak"
 	winStreak.Value = stats.WinStreak
 	winStreak.Parent = leaderstats
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
+========
+	
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+	
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	local levelValue = Instance.new("IntValue")
 	levelValue.Name = "Level"
 	levelValue.Value = level
@@ -173,7 +252,15 @@ local function saveData(player)
 				Equipped = sessionData[userId].Equipped
 			})
 		end)
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
+========
+		
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+		
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 		pcall(function()
 			StatsDataStore:SetAsync(tostring(userId), sessionData[userId].Stats)
 		end)
@@ -189,7 +276,11 @@ getEquippedItemsFunction.OnServerInvoke = function(player)
 	local data = sessionData[player.UserId]
 
 	if not data then return {} end
+<<<<<<< HEAD
 
+=======
+	
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	local equippedNames = {}
 	for _, itemName in ipairs(data.Equipped) do
 		if SWORD_DEFINITIONS[itemName] then
@@ -218,7 +309,15 @@ equipItemEvent.OnServerEvent:Connect(function(player, itemName, isUnequip)
 		if index then
 			table.remove(data.Equipped, index)
 		end
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
+========
+		
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+		
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 		if #data.Equipped == 0 then
 			table.insert(data.Equipped, "DefaultSword")
 		end
@@ -227,7 +326,15 @@ equipItemEvent.OnServerEvent:Connect(function(player, itemName, isUnequip)
 	end
 
 	inventoryUpdatedEvent:FireClient(player)
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
+========
+	
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+	
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	if player.Character then
 		local newSword = data.Equipped[1] or "None"
 		player.Character:SetAttribute("EquippedSword", newSword)
@@ -251,6 +358,8 @@ end
 function DataService.AddWin(player)
 	local data = sessionData[player.UserId]
 	if not data or not data.Stats then return end
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
 	data.Stats.Wins = data.Stats.Wins + 1
 	data.Stats.WinStreak = data.Stats.WinStreak + 1
@@ -259,25 +368,65 @@ function DataService.AddWin(player)
 		data.Stats.PeakWinStreak = data.Stats.WinStreak
 	end
 
+========
+=======
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
+	
+	data.Stats.Wins = data.Stats.Wins + 1
+	data.Stats.WinStreak = data.Stats.WinStreak + 1
+	
+	if data.Stats.WinStreak > data.Stats.PeakWinStreak then
+		data.Stats.PeakWinStreak = data.Stats.WinStreak
+	end
+	
+<<<<<<< HEAD
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	DataService.UpdateLeaderStats(player)
 end
 
 function DataService.AddLoss(player)
 	local data = sessionData[player.UserId]
 	if not data or not data.Stats then return end
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
 	data.Stats.Losses = data.Stats.Losses + 1
 	data.Stats.WinStreak = 0
 
+========
+=======
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
+	
+	data.Stats.Losses = data.Stats.Losses + 1
+	data.Stats.WinStreak = 0
+	
+<<<<<<< HEAD
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	DataService.UpdateLeaderStats(player)
 end
 
 function DataService.AddXP(player, amount)
 	local data = sessionData[player.UserId]
 	if not data or not data.Stats then return end
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
 	data.Stats.XP = data.Stats.XP + amount
 
+========
+	
+	data.Stats.XP = data.Stats.XP + amount
+	
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+	
+	data.Stats.XP = data.Stats.XP + amount
+	
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	local newLevel = calculateLevelFromXP(data.Stats.XP)
 	DataService.UpdateLeaderStats(player)
 end
@@ -285,13 +434,23 @@ end
 function DataService.AddGoal(player)
 	local data = sessionData[player.UserId]
 	if not data or not data.Stats then return end
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
+========
+	
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+	
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	data.Stats.TotalGoals = data.Stats.TotalGoals + 1
 end
 
 function DataService.UpdateLeaderStats(player)
 	local data = sessionData[player.UserId]
 	if not data or not data.Stats then return end
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if not leaderstats then return end
@@ -299,31 +458,82 @@ function DataService.UpdateLeaderStats(player)
 	local stats = data.Stats
 	local level = calculateLevelFromXP(stats.XP)
 
+========
+=======
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
+	
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if not leaderstats then return end
+	
+	local stats = data.Stats
+	local level = calculateLevelFromXP(stats.XP)
+	
+<<<<<<< HEAD
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	local winsValue = leaderstats:FindFirstChild("Wins")
 	if winsValue then
 		winsValue.Value = stats.Wins
 	end
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
+========
+	
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+	
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	local winStreakValue = leaderstats:FindFirstChild("Win Streak")
 	if winStreakValue then
 		winStreakValue.Value = stats.WinStreak
 	end
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
+========
+	
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+	
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	local levelValue = leaderstats:FindFirstChild("Level")
 	if levelValue then
 		levelValue.Value = level
 	end
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
+========
+	
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+	
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	statsUpdatedEvent:FireClient(player, stats, level)
 end
 
 function DataService.GetStats(player)
 	local data = sessionData[player.UserId]
 	if not data or not data.Stats then return nil end
+<<<<<<< HEAD
+<<<<<<<< HEAD:ReplicatedStorage/DataService.lua
 
 	local stats = data.Stats
 	local level = calculateLevelFromXP(stats.XP)
 
+========
+=======
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
+	
+	local stats = data.Stats
+	local level = calculateLevelFromXP(stats.XP)
+	
+<<<<<<< HEAD
+>>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80:ServerScriptService/DataService.lua
+=======
+>>>>>>> ea4cf3b7158848a244bfc943a493ca9819c44b80
 	return {
 		Wins = stats.Wins,
 		Losses = stats.Losses,
