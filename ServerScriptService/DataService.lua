@@ -22,7 +22,6 @@ local function createRemote(className, name)
 	return remote
 end
 
--- Inventory remotes
 local getInventoryFunction = createRemote("RemoteFunction", "GetInventoryFunction")
 local getEquippedItemsFunction = createRemote("RemoteFunction", "GetEquippedItemsFunction")
 local equipItemEvent = createRemote("RemoteEvent", "EquipItemEvent")
@@ -31,7 +30,6 @@ local sellItemEvent = createRemote("RemoteEvent", "SellItemEvent")
 local sellAllItemEvent = createRemote("RemoteEvent", "SellAllItemEvent")
 local toggleLockItemEvent = createRemote("RemoteEvent", "ToggleLockItemEvent")
 
--- Stats remotes
 local statsUpdatedEvent = createRemote("RemoteEvent", "StatsUpdatedEvent")
 
 local sessionData = {}
@@ -51,7 +49,6 @@ local SWORD_DEFINITIONS = {
 	}
 }
 
--- Level system: 100 XP for level 2, 200 XP for level 3, etc (cumulative)
 local function calculateLevelFromXP(xp)
 	local level = 1
 	local cumulativeXP = 0
@@ -93,7 +90,6 @@ end
 local function loadData(player)
 	local userId = player.UserId
 	
-	-- Load inventory
 	local success, data = pcall(function()
 		return InventoryDataStore:GetAsync(tostring(userId))
 	end)
@@ -128,7 +124,6 @@ local function loadData(player)
 		table.insert(sessionData[userId].Equipped, "DefaultSword")
 	end
 	
-	-- Load stats
 	local statsSuccess, statsData = pcall(function()
 		return StatsDataStore:GetAsync(tostring(userId))
 	end)
@@ -146,7 +141,6 @@ local function loadData(player)
 		}
 	end
 	
-	-- Create leaderstats for playerlist
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
 	leaderstats.Parent = player
@@ -173,7 +167,6 @@ end
 local function saveData(player)
 	local userId = player.UserId
 	if sessionData[userId] then
-		-- Save inventory
 		pcall(function()
 			InventoryDataStore:SetAsync(tostring(userId), {
 				Inventory = sessionData[userId].Inventory,
@@ -181,7 +174,6 @@ local function saveData(player)
 			})
 		end)
 		
-		-- Save stats
 		pcall(function()
 			StatsDataStore:SetAsync(tostring(userId), sessionData[userId].Stats)
 		end)
