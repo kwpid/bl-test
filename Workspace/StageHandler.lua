@@ -543,8 +543,8 @@ GoalScoredEvent.Event:Connect(function(team, gameId, hitterName)
         local gameInst = ActiveGames[gameId]
         if gameInst and gameInst.InProgress then
                 gameInst.TimerRunning = false
-                if team == "red" then gameInst.Scores.red += 1 end
-                if team == "blue" then gameInst.Scores.blue += 1 end
+                if team == "red" then gameInst.Scores.red = gameInst.Scores.red + 1 end
+                if team == "blue" then gameInst.Scores.blue = gameInst.Scores.blue + 1 end
                 gameInst:UpdateScoreUI()
                 gameInst:ShowGoalUI(hitterName)
                 

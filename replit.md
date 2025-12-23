@@ -89,26 +89,43 @@ local isValid, error = MapManager.validateMap(myMap)
 - Developer debug commands
 - **Dynamic map system** - Add maps without code changes
 
-## Important: Roblox Studio Required ⚠️
-**These scripts CANNOT be executed in Replit.** This is a Roblox Studio project that requires the Roblox engine to run.
+## ⚠️ ROBLOX STUDIO PROJECT - Cannot Run in Replit
 
-### To use this project:
-1. Open **Roblox Studio** on your computer
-2. Create or open a game
-3. Copy the Lua scripts from this repository into their respective folders in Studio
-4. Ensure your game has the required parts (T1, T2, Plate1, Plate2, BallSpawn, etc.)
-5. Create map models in ReplicatedStorage/Maps/ (the system will auto-migrate legacy maps)
-6. Run the game in Studio to test
+**This repository contains a Roblox game project that REQUIRES Roblox Studio to run.** Replit cannot execute Roblox code - it's only suitable for version control and code editing.
 
-### What Changed in This Version
-- **MapManager.lua** - New module for dynamic map selection
-- **StageHandler.lua** - Updated to use MapManager (no need to edit it for new maps)
-- Maps are now stored in `ReplicatedStorage/Maps/` instead of hardcoded
-- Auto-migration: If no maps exist, the system creates a `Legacy_1v1` map from your existing Workspace.Stage
+### Quick Setup in Roblox Studio
 
-### Troubleshooting in Studio
-If you get errors when running the game:
-1. Check the **Output** panel in Studio for error messages
-2. Ensure all required services are available (they should be in Studio)
-3. Verify map structure - maps must have BallSpawn, T1, T2 parts
-4. Check that Modules folder exists in ReplicatedStorage
+1. **Open Roblox Studio** with your game project
+2. **Copy these files** from this repository into your game:
+   - `ReplicatedStorage/MapManager.lua` → ReplicatedStorage folder
+   - `Workspace/StageHandler.lua` → Workspace/Stage folder (replace old one)
+   - Other scripts as needed
+
+3. **Create your maps:**
+   - In Studio: `ReplicatedStorage` → Create Folder → Name it `Maps`
+   - Inside `Maps`: Create Models for each game arena
+   - Each map model MUST have:
+     - **BallSpawn** (Part) - where the ball spawns
+     - **T1** (Part) - Team 1 spawn location
+     - **T2** (Part) - Team 2 spawn location
+   - Optional extras:
+     - **Plate1**, **Plate2** (Parts with Board inside) - game arena UI
+     - **Config** (IntValue) - Set value to max players (default: 2)
+
+4. **Your lobby (Workspace/Stage) stays as-is** - it's separate from game maps
+
+### What Changed
+
+- **MapManager.lua** - New system that selects random maps from ReplicatedStorage/Maps/
+- **StageHandler.lua** - Refactored to use MapManager (no code updates needed for new maps)
+- Maps are now dynamic and scalable - add unlimited maps without touching StageHandler
+- Fixed error handling for missing board parts
+
+### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| Game fails to start | Check that at least one map exists in ReplicatedStorage/Maps/ with BallSpawn, T1, T2 |
+| Players not teleported | Verify T1 and T2 parts exist in your map |
+| Ball doesn't spawn | Ensure BallSpawn part exists in your map |
+| Output shows warnings | Check ReplicatedStorage has Modules folder (Zone module needed) |
