@@ -119,6 +119,7 @@ function BallPhysics:update(dt, raycastFunc, groundHeight, radius, onCollision)
 				self.velocity = reflectedVelocity
 				local distanceTraveled = (collision.Position - self.position).Magnitude
 				local remainingDistance = math.max(0, stepVector.Magnitude - distanceTraveled)
+				remainingDistance = math.min(remainingDistance, radius * 2)
 				self.position = collision.Position
 					+ (normal * radius)
 					+ (reflectedVelocity.Unit * remainingDistance)

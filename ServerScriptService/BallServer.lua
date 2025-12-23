@@ -43,6 +43,20 @@ if not GoalScoredEvent then
 	GoalScoredEvent.Parent = RemoteEventsFolder
 end
 
+local ClearBallEvent = RemoteEventsFolder:FindFirstChild("ClearBall")
+if not ClearBallEvent then
+	ClearBallEvent = Instance.new("BindableEvent")
+	ClearBallEvent.Name = "ClearBall"
+	ClearBallEvent.Parent = RemoteEventsFolder
+end
+
+local ClearClientBallEvent = RemoteEventsFolder:FindFirstChild("ClearClientBall")
+if not ClearClientBallEvent then
+	ClearClientBallEvent = Instance.new("RemoteEvent")
+	ClearClientBallEvent.Name = "ClearClientBall"
+	ClearClientBallEvent.Parent = RemoteEventsFolder
+end
+
 local ballTemplate = ReplicatedStorage:WaitForChild("Ball")
 
 local oldBall = workspace:FindFirstChild("Ball")
@@ -72,7 +86,7 @@ local ActiveBalls = {}
 
 local function updateRaycastFilter()
 	local filterList = {}
-	
+
 	for _, data in pairs(ActiveBalls) do
 		if data.object then
 			table.insert(filterList, data.object)
@@ -88,7 +102,7 @@ local function updateRaycastFilter()
 			end
 		end
 	end
-	
+
 	for _, obj in ipairs(workspace:GetDescendants()) do
 		if obj:IsA("BasePart") then
 			local name = obj.Name:lower()
@@ -97,13 +111,13 @@ local function updateRaycastFilter()
 			local isFloor = name:find("floor") or name:find("field") or name:find("arena")
 			local isTransparent = obj.Transparency >= 0.9 
 			local isMesh = obj:IsA("MeshPart")
-			
+
 			if isMarker or ((isTransparent or isMesh) and not isHitbox and not isFloor) then
 				table.insert(filterList, obj)
 			end
 		end
 	end
-	
+
 	raycastParams.FilterDescendantsInstances = filterList
 end
 
@@ -120,11 +134,11 @@ local function getGroundHeight(position)
 	local rayOrigin = Vector3.new(position.X, position.Y + 5, position.Z)
 	local rayDirection = Vector3.new(0, -500, 0)
 	local rayResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-	
+
 	if rayResult then
 		return rayResult.Position.Y
 	end
-	
+
 	return 0
 end
 
@@ -144,19 +158,19 @@ end
 
 RunService.Heartbeat:Connect(function(dt)
 	local hasUpdate = false
-	
+
 	for gameId, data in pairs(ActiveBalls) do
 		local ball = data.object
-		
+
 		if ball and ball.Parent then
 			local ballState = data.state
 			local ballFrozen = data.frozen
 			local updated = false
-			
+
 			if not ballFrozen then
 				data.lastGroundCheck = data.lastGroundCheck + dt
 				local currentGroundHeight = 0
-				
+
 				if data.lastGroundCheck > 0.1 then
 					currentGroundHeight = getGroundHeight(ballState.position)
 					data.lastGroundCheck = 0
@@ -172,9 +186,9 @@ RunService.Heartbeat:Connect(function(dt)
 						ball.Bounce:Play()
 					end
 				end)
-				
+
 				ballState:enforceFloatHeight(currentGroundHeight)
-				
+
 				local isGrounded = (ballState.position.Y <= currentGroundHeight + Config.Physics.FLOAT_HEIGHT + 0.1)
 				if ball:GetAttribute("Grounded") ~= isGrounded then
 					ball:SetAttribute("Grounded", isGrounded)
@@ -190,7 +204,7 @@ RunService.Heartbeat:Connect(function(dt)
 				if map then
 					local redGoal = map:FindFirstChild("GoalDetectorRed", true)
 					local blueGoal = map:FindFirstChild("GoalDetectorBlue", true)
-					
+
 					if not redGoal or not blueGoal then
 						warn("Goal detectors not found in map! Red:", redGoal ~= nil, "Blue:", blueGoal ~= nil)
 					end
@@ -206,7 +220,7 @@ RunService.Heartbeat:Connect(function(dt)
 					if redGoal then
 						local dist = (ball.Position - redGoal.Position).Magnitude
 						local isInside = isPointInPart(ball.Position, redGoal, ball.Size.X / 2)
-						
+
 						if isInside or dist <= 6 then
 							local lastTeam = ball:GetAttribute("LastTeam")
 							if lastTeam == "blue" then
@@ -214,10 +228,10 @@ RunService.Heartbeat:Connect(function(dt)
 								ball.Anchored = true
 								setBallVisuals(ball, false)
 								ballState.transparency = 1
-								
+
 								RemoteEvents.ballUpdate:FireAllClients(ballState:serialize(), gameId)
 								GoalScoredEvent:Fire("blue", gameId, ballState.lastHitter)
-								
+
 								ball:Destroy()
 								ball = nil
 								ActiveBalls[gameId] = nil
@@ -225,11 +239,11 @@ RunService.Heartbeat:Connect(function(dt)
 							end
 						end
 					end
-					
+
 					if blueGoal then
 						local dist = (ball.Position - blueGoal.Position).Magnitude
 						local isInside = isPointInPart(ball.Position, blueGoal, ball.Size.X / 2)
-						
+
 						if isInside or dist <= 6 then
 							local lastTeam = ball:GetAttribute("LastTeam")
 							if lastTeam == "red" then
@@ -237,10 +251,10 @@ RunService.Heartbeat:Connect(function(dt)
 								ball.Anchored = true
 								setBallVisuals(ball, false)
 								ballState.transparency = 1
-								
+
 								RemoteEvents.ballUpdate:FireAllClients(ballState:serialize(), gameId)
 								GoalScoredEvent:Fire("red", gameId, ballState.lastHitter)
-								
+
 								ball:Destroy()
 								ball = nil
 								ActiveBalls[gameId] = nil
@@ -275,10 +289,12 @@ local lastHitTime = {}
 ServerEvents.ballHit.Event:Connect(function(player, cameraDirection)
 	local gameId = player:GetAttribute("GameId")
 	if not gameId or not ActiveBalls[gameId] then return end
-	
+
 	local data = ActiveBalls[gameId]
 	local ballState = data.state
-	
+
+	if data.frozen then return end
+
 	if cameraDirection.Magnitude < 0.001 then return end
 
 	ballState:applyHit(cameraDirection, nil, player.Name)
@@ -299,7 +315,7 @@ end)
 
 local function SetupBallForGame(position, gameId, parentFolder)
 	if not gameId then return end
-	
+
 	local ground = getGroundHeight(position)
 	print("BallServer: Spawning at", position, "Detected Ground:", ground)
 
@@ -312,7 +328,7 @@ local function SetupBallForGame(position, gameId, parentFolder)
 	local ball = ballTemplate:Clone()
 	ball.Name = "Ball" 
 	ball.Parent = parentFolder or workspace
-	
+
 	data = {
 		object = ball,
 		state = nil, 
@@ -328,7 +344,7 @@ local function SetupBallForGame(position, gameId, parentFolder)
 	local ballState = BallPhysics.new(position)
 	ballState.transparency = 0
 	ballState.color = Color3.new(1, 1, 1)
-	
+
 	ball.Position = position
 	ball.Color = ballState.color
 	ball.Anchored = true
@@ -350,17 +366,27 @@ local function SetupBallForGame(position, gameId, parentFolder)
 
 	ballState.transparency = 0
 	ballState.lastHitter = "None"
-	
+
 	data.state = ballState
-	
+
 	ballState:enforceFloatHeight(ground)
 	ball.Position = ballState.position
-	
+
 	RemoteEvents.ballUpdate:FireAllClients(ballState:serialize(), gameId)
 end
 
 ResetBallEvent.Event:Connect(SetupBallForGame)
 
+ClearBallEvent.Event:Connect(function(gameId)
+	if gameId and ActiveBalls[gameId] then
+		local data = ActiveBalls[gameId]
+		if data.object then
+			data.object:Destroy()
+		end
+		ActiveBalls[gameId] = nil
+		updateRaycastFilter()
+	end
+end)
 
 local debugResetEvent = RemoteEventsFolder:FindFirstChild("DebugReset")
 

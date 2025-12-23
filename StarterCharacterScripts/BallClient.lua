@@ -27,6 +27,8 @@ local RemoteEvents = {
 local ServerEvents = {}
 ServerEvents.ballHit = RemoteEventsFolder:WaitForChild("ServerBallHit")
 
+local ClearClientBallEvent = RemoteEventsFolder:WaitForChild("ClearClientBall")
+
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
@@ -35,7 +37,20 @@ local clientBall = nil
 local clientState = BallPhysics.new(Vector3.zero)
 local serverState = BallPhysics.new(Vector3.zero)
 
--- State & Debug Flags
+ClearClientBallEvent.OnClientEvent:Connect(function(gameId)
+	if clientBall and clientBall:GetAttribute("GameId") == gameId then
+		clientBall:Destroy()
+		clientBall = nil
+	end
+	currentBall = nil
+
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj.Name == "ClientBall" and obj:GetAttribute("PlayerId") == player.UserId and obj:GetAttribute("GameId") == gameId then
+			obj:Destroy()
+		end
+	end
+end)
+
 local debugFolder = workspace:FindFirstChild("BallDebug")
 if not debugFolder then
 	debugFolder = Instance.new("Folder")
@@ -51,16 +66,17 @@ local originalCameraSubject = nil
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 
--- Helper Functions
-local function createClientBall()
+local function createClientBall(gameId)
 	if clientBall then clientBall:Destroy() end
 	clientBall = ReplicatedStorage:WaitForChild("Ball"):Clone()
 	clientBall.Name = "ClientBall"
 	clientBall.Transparency = 0
 	clientBall.CanCollide = false
 	clientBall.Anchored = true
+	clientBall:SetAttribute("PlayerId", player.UserId)
+	clientBall:SetAttribute("GameId", gameId)
 	clientBall.Parent = workspace
-	
+
 	local highlight = Instance.new("Highlight")
 	highlight.FillTransparency = 1
 	highlight.OutlineTransparency = 0
@@ -125,7 +141,7 @@ local function getGroundHeight(position)
 	local rayDirection = Vector3.new(0, -300, 0)
 	local rayResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
 	if rayResult then return rayResult.Position.Y end
-	
+
 	local backupOrigin = Vector3.new(position.X, position.Y + 100, position.Z)
 	local backupResult = workspace:Raycast(backupOrigin, rayDirection, raycastParams)
 	return backupResult and backupResult.Position.Y or 0
@@ -156,7 +172,7 @@ TextChatService.SendingMessage:Connect(function(message)
 		end
 	end
 	if not isDev then return end
-	
+
 	if message.Text == "/debug" then debugEnabled = not debugEnabled
 	elseif message.Text == "/debug:hitbox" then debugHitboxEnabled = not debugHitboxEnabled
 	elseif message.Text == "/ballcam" then
@@ -184,8 +200,14 @@ task.spawn(function()
 				local s = BallPhysics.new(currentBall.Position)
 				serverState:deserialize(s:serialize())
 				clientState:deserialize(s:serialize())
-				if not clientBall then createClientBall() end
+				local gameId = currentBall:GetAttribute("GameId")
+				if not clientBall then createClientBall(gameId) end
 				updateRaycastFilter()
+			else
+				if clientBall then
+					clientBall:Destroy()
+					clientBall = nil
+				end
 			end
 		end
 		task.wait(1)
@@ -200,7 +222,7 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 		return
 	end
-	
+
 	local lerpSpeed = 15
 	local lerpFactor = math.clamp(dt * lerpSpeed, 0, 1)
 	if serverState.isMoving then
@@ -220,7 +242,7 @@ RunService.Heartbeat:Connect(function(dt)
 	clientBall.Position = clientState.position
 	clientBall.Color = clientState.color
 	clientBall.Transparency = clientState.transparency or 0
-	
+
 	currentBall.Transparency = 1
 	for _, desc in ipairs(currentBall:GetDescendants()) do
 		if desc:IsA("BasePart") or desc:IsA("Decal") or desc:IsA("Texture") then

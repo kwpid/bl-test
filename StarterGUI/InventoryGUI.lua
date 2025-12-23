@@ -37,7 +37,7 @@ local selectedItem = nil
 local uiName = popout:WaitForChild("ItemName", 5)
 local uiImage = popout:WaitForChild("ImageLabel", 5)
 local uiValue = popout:FindFirstChild("Value") 
- 
+
 local btnEquip = popout:WaitForChild("Equip", 5)
 
 if not uiName or not uiImage or not btnEquip then
@@ -55,26 +55,26 @@ local function updatePopout()
 		popout.Visible = false
 		return
 	end
-	
+
 	popout.Visible = true
-	
+
 
 	if uiName then uiName.Text = selectedItem.Name end
-	
+
 
 	if uiImage then
 		local rbxId = selectedItem.RobloxId or 0
 
 		uiImage.Image = "rbxthumb://type=Asset&id=" .. rbxId .. "&w=420&h=420"
 	end
-	
+
 
 	if uiValue and selectedItem.Value then
 		uiValue.Text = "R$ " .. formatNumber(selectedItem.Value)
 	elseif uiValue then
 		uiValue.Text = ""
 	end
-	
+
 
 	if btnEquip then
 		local isEquipped = equippedItems[selectedItem.Name]
@@ -91,14 +91,14 @@ local function refreshInventory()
 
 	local successInv, invData = pcall(function() return getInventoryFunc:InvokeServer() end)
 	local successEq, eqData = pcall(function() return getEquippedFunc:InvokeServer() end)
-	
+
 	if not successInv or not invData then
 		warn("InventoryGUI: Failed to fetch inventory")
 		return
 	end
-	
+
 	currentInventory = invData
-	
+
 
 	equippedItems = {}
 	if successEq and eqData then
@@ -106,14 +106,14 @@ local function refreshInventory()
 			equippedItems[name] = true
 		end
 	end
-	
+
 
 	for _, child in ipairs(handler:GetChildren()) do
 		if child:IsA("GuiObject") then
 			child:Destroy()
 		end
 	end
-	
+
 
 	for i, item in ipairs(currentInventory) do
 		local clone = sample:Clone()
@@ -121,27 +121,27 @@ local function refreshInventory()
 		clone.LayoutOrder = i
 		clone.Parent = handler
 		clone.Visible = true
-		
+
 
 		if clone:IsA("ImageButton") then
 			local rbxId = item.RobloxId or 0
 			clone.Image = "rbxthumb://type=Asset&id=" .. rbxId .. "&w=150&h=150"
 		end
-		
+
 
 		local qty = clone:FindFirstChild("Qty")
 		if qty and item.Amount then
 			qty.Text = "x" .. item.Amount
 			qty.Visible = (item.Amount > 1)
 		end
-		
+
 
 		clone.MouseButton1Click:Connect(function()
 			selectedItem = item
 			updatePopout()
 		end)
 	end
-	
+
 
 	if selectedItem then
 		updatePopout()
@@ -152,28 +152,28 @@ end
 if btnEquip then
 	btnEquip.MouseButton1Click:Connect(function()
 		if not selectedItem then return end
-		
+
 		local itemName = selectedItem.Name
 		local isCurrentlyEquipped = equippedItems[itemName]
-		
+
 
 		if isCurrentlyEquipped then
 
 			equipItemEvent:FireServer(itemName, true)
-			
+
 
 			equippedItems[itemName] = nil
 			if btnEquip then btnEquip.Text = "Equip" end
 		else
 
 			equipItemEvent:FireServer(itemName, false)
-			
+
 
 			equippedItems = {} 
 			equippedItems[itemName] = true
 			if btnEquip then btnEquip.Text = "Unequip" end
 		end
-		
+
 
 		task.wait(0.1)
 		refreshInventory()
@@ -184,37 +184,6 @@ end
 if inventoryUpdatedEvent then
 	inventoryUpdatedEvent.OnClientEvent:Connect(refreshInventory)
 end
-
-
-local function updateGameVisibility()
-	local gameId = player:GetAttribute("GameId")
-	local inGame = (gameId ~= nil)
-	
-	if inGame then
-		gui.Enabled = false
-		
-		local mainUI = player.PlayerGui:FindFirstChild("MainUI")
-		if mainUI then
-			mainUI.Enabled = false
-		end
-	else
-		gui.Enabled = true
-		
-		local mainUI = player.PlayerGui:FindFirstChild("MainUI")
-		if mainUI then
-			mainUI.Enabled = true
-		end
-	end
-end
-
-player:GetAttributeChangedSignal("GameId"):Connect(updateGameVisibility)
-updateGameVisibility()
-refreshInventory()
-
-player.CharacterAdded:Connect(function()
-	refreshInventory()
-	updateGameVisibility()
-end)
 
 gui:GetPropertyChangedSignal("Visible"):Connect(function()
 	if gui.Visible then

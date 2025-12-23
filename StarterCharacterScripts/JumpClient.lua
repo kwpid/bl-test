@@ -78,6 +78,16 @@ UserInputService.JumpRequest:Connect(function()
 		tryDoubleJump()
 	end
 end)
+local lastTouchTime = 0
+local touchDebounce = 0.3
+UserInputService.TouchMoved:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	local currentTime = tick()
+	if currentTime - lastTouchTime < touchDebounce then
+		tryDoubleJump()
+	end
+	lastTouchTime = currentTime
+end)
 
 doubleJumpEvent.OnClientEvent:Connect(function(otherPlayer)
 	if otherPlayer ~= player then
