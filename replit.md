@@ -16,10 +16,11 @@ ReplicatedStorage/       - Shared modules accessible by both client and server
     [MapName]/          - Each map model with:
       BallSpawn         - Ball spawn location
       T1, T2            - Team spawn locations
-      Plate1, Plate2    - Team areas
+      Plate1, Plate2    - Team areas (optional, for game UI)
       Config (IntValue) - MaxPlayers configuration
 
 ServerScriptService/     - Server-side scripts (run on Roblox servers)
+  MatchManager.lua      - Centralized match/game logic (manages all stages)
   BallServer.lua        - Server-side ball logic and networking
   DataService.lua       - Player data persistence
   JumpServer.lua        - Server-side jump mechanics
@@ -33,23 +34,28 @@ StarterCharacterScripts/ - Scripts attached to player characters
 StarterGUI/              - GUI scripts and interfaces
   InventoryGUI.lua      - Inventory user interface
 
-Workspace/               - Scripts placed in the game world
-  StageHandler.lua      - Stage/match management (uses MapManager)
+Workspace/               - Game world objects
+  Stage                 - Lobby area (players queue here to start games)
+    (No script needed - MatchManager in ServerScriptService handles everything)
 ```
 
-## Recent Changes (Scalable Map System)
+## Recent Changes (Refactored Architecture)
 
-### New MapManager Module
-- Centralized map/stage logic in `ReplicatedStorage/MapManager.lua`
-- Dynamically selects random maps from `ReplicatedStorage/Maps/` folder
+### New MatchManager Module
+- **Centralized match logic** in `ServerScriptService/MatchManager.lua`
+- Single script manages all match creation, scoring, timers, and player management
+- Edit ONE script instead of multiple stage instances
+- All changes automatically apply to every stage
+
+### MapManager Module
+- Dynamic map selection from `ReplicatedStorage/Maps/` folder
+- Supports unlimited maps without code changes
 - Each map can have its own configuration (MaxPlayers IntValue)
-- Eliminates need to update StageHandler for each new map
+- Automatically handles arena creation and positioning
 
-### Updated StageHandler
-- Refactored to use MapManager for arena creation
-- Removed hardcoded template parts
-- Now supports unlimited map variations
-- Automatically reads map configurations
+### Removed Old Files
+- Deleted `Workspace/StageHandler.lua` (logic moved to MatchManager)
+- No stage-specific scripts needed anymore
 
 ## Setup Instructions
 
@@ -97,29 +103,42 @@ local isValid, error = MapManager.validateMap(myMap)
 
 1. **Open Roblox Studio** with your game project
 2. **Copy these files** from this repository into your game:
+   - `ServerScriptService/MatchManager.lua` → ServerScriptService folder (NEW - main script!)
    - `ReplicatedStorage/MapManager.lua` → ReplicatedStorage folder
-   - `Workspace/StageHandler.lua` → Workspace/Stage folder (replace old one)
-   - Other scripts as needed
+   - Delete old `Workspace/Stage/StageHandler.lua` if it exists
 
-3. **Create your maps:**
+3. **Create your game maps:**
    - In Studio: `ReplicatedStorage` → Create Folder → Name it `Maps`
    - Inside `Maps`: Create Models for each game arena
    - Each map model MUST have:
      - **BallSpawn** (Part) - where the ball spawns
      - **T1** (Part) - Team 1 spawn location
      - **T2** (Part) - Team 2 spawn location
-   - Optional extras:
-     - **Plate1**, **Plate2** (Parts with Board inside) - game arena UI
-     - **Config** (IntValue) - Set value to max players (default: 2)
+   - Optional:
+     - **Plate1**, **Plate2** (Parts with Board inside for UI)
+     - **Config** (IntValue) - max players
 
-4. **Your lobby (Workspace/Stage) stays as-is** - it's separate from game maps
+4. **Your lobby (Workspace/Stage) stays as-is** - MatchManager auto-connects to it
+5. **That's it!** - MatchManager handles everything. Add maps to Maps folder anytime
 
-### What Changed
+### What Changed (This Session)
 
-- **MapManager.lua** - New system that selects random maps from ReplicatedStorage/Maps/
-- **StageHandler.lua** - Refactored to use MapManager (no code updates needed for new maps)
-- Maps are now dynamic and scalable - add unlimited maps without touching StageHandler
-- Fixed error handling for missing board parts
+1. **MatchManager.lua** (NEW in ServerScriptService)
+   - Centralized match management script
+   - Handles game creation, scoring, timers, player management
+   - Automatically finds the Stage lobby in Workspace
+   - Edit ONE file instead of multiple stage scripts
+
+2. **MapManager.lua** (Improved)
+   - Selects random maps from ReplicatedStorage/Maps/
+   - Works with MatchManager to create game arenas
+   - Maps are fully customizable and scalable
+
+3. **Architecture Benefits**
+   - Single source of truth for match logic
+   - Update game rules once, applies everywhere
+   - Add unlimited maps without code changes
+   - Cleaner project structure
 
 ### Common Issues
 
