@@ -3,7 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local InventoryDataStore = DataStoreService:GetDataStore("PlayerInventory_v1")
-
+local StatsDataStore = DataStoreService:GetDataStore("PlayerStats_v1")
 
 local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 if not remoteEvents then
@@ -22,6 +22,7 @@ local function createRemote(className, name)
 	return remote
 end
 
+-- Inventory remotes
 local getInventoryFunction = createRemote("RemoteFunction", "GetInventoryFunction")
 local getEquippedItemsFunction = createRemote("RemoteFunction", "GetEquippedItemsFunction")
 local equipItemEvent = createRemote("RemoteEvent", "EquipItemEvent")
@@ -30,15 +31,15 @@ local sellItemEvent = createRemote("RemoteEvent", "SellItemEvent")
 local sellAllItemEvent = createRemote("RemoteEvent", "SellAllItemEvent")
 local toggleLockItemEvent = createRemote("RemoteEvent", "ToggleLockItemEvent")
 
+-- Stats remotes
+local statsUpdatedEvent = createRemote("RemoteEvent", "StatsUpdatedEvent")
 
 local sessionData = {}
-
 
 local SWORD_DEFINITIONS = {
 	["DefaultSword"] = {
 		Name = "DefaultSword",
 		RobloxId = 1133333333,
-
 		Value = 0,
 		Rarity = "Common",
 	},
@@ -49,6 +50,31 @@ local SWORD_DEFINITIONS = {
 		Rarity = "Rare",
 	}
 }
+
+-- Level system: 100 XP for level 2, 200 XP for level 3, etc (cumulative)
+local function calculateLevelFromXP(xp)
+	local level = 1
+	local cumulativeXP = 0
+	
+	while true do
+		local xpForNextLevel = level * 100
+		if cumulativeXP + xpForNextLevel > xp then
+			break
+		end
+		cumulativeXP = cumulativeXP + xpForNextLevel
+		level = level + 1
+	end
+	
+	return level
+end
+
+local function getXPForLevel(level)
+	local totalXP = 0
+	for i = 1, level - 1 do
+		totalXP = totalXP + (i * 100)
+	end
+	return totalXP
+end
 
 local function getFullItemData(itemName)
 	local def = SWORD_DEFINITIONS[itemName]
@@ -66,6 +92,8 @@ end
 
 local function loadData(player)
 	local userId = player.UserId
+	
+	-- Load inventory
 	local success, data = pcall(function()
 		return InventoryDataStore:GetAsync(tostring(userId))
 	end)
@@ -80,16 +108,12 @@ local function loadData(player)
 	end
 
 	local STARTER_ITEMS = { "DefaultSword", "Dark Scythe" }
-
-
 	local inventory = sessionData[userId].Inventory
 	
-
 	local ownedItems = {}
 	for _, item in ipairs(inventory) do
 		ownedItems[item.Name] = true
 	end
-
 
 	for _, itemName in ipairs(STARTER_ITEMS) do
 		if not ownedItems[itemName] then
@@ -100,21 +124,69 @@ local function loadData(player)
 		end
 	end
 
-
 	if #sessionData[userId].Equipped == 0 then
 		table.insert(sessionData[userId].Equipped, "DefaultSword")
 	end
+	
+	-- Load stats
+	local statsSuccess, statsData = pcall(function()
+		return StatsDataStore:GetAsync(tostring(userId))
+	end)
+	
+	if statsSuccess and statsData then
+		sessionData[userId].Stats = statsData
+	else
+		sessionData[userId].Stats = {
+			Wins = 0,
+			Losses = 0,
+			WinStreak = 0,
+			PeakWinStreak = 0,
+			XP = 0,
+			TotalGoals = 0,
+		}
+	end
+	
+	-- Create leaderstats for playerlist
+	local leaderstats = Instance.new("Folder")
+	leaderstats.Name = "leaderstats"
+	leaderstats.Parent = player
+	
+	local stats = sessionData[userId].Stats
+	local level = calculateLevelFromXP(stats.XP)
+	
+	local wins = Instance.new("IntValue")
+	wins.Name = "Wins"
+	wins.Value = stats.Wins
+	wins.Parent = leaderstats
+	
+	local winStreak = Instance.new("IntValue")
+	winStreak.Name = "Win Streak"
+	winStreak.Value = stats.WinStreak
+	winStreak.Parent = leaderstats
+	
+	local levelValue = Instance.new("IntValue")
+	levelValue.Name = "Level"
+	levelValue.Value = level
+	levelValue.Parent = leaderstats
 end
 
 local function saveData(player)
 	local userId = player.UserId
 	if sessionData[userId] then
+		-- Save inventory
 		pcall(function()
-			InventoryDataStore:SetAsync(tostring(userId), sessionData[userId])
+			InventoryDataStore:SetAsync(tostring(userId), {
+				Inventory = sessionData[userId].Inventory,
+				Equipped = sessionData[userId].Equipped
+			})
+		end)
+		
+		-- Save stats
+		pcall(function()
+			StatsDataStore:SetAsync(tostring(userId), sessionData[userId].Stats)
 		end)
 	end
 end
-
 
 getInventoryFunction.OnServerInvoke = function(player)
 	local data = sessionData[player.UserId]
@@ -123,13 +195,11 @@ end
 
 getEquippedItemsFunction.OnServerInvoke = function(player)
 	local data = sessionData[player.UserId]
-	local data = sessionData[player.UserId]
 
 	if not data then return {} end
 	
 	local equippedNames = {}
 	for _, itemName in ipairs(data.Equipped) do
-
 		if SWORD_DEFINITIONS[itemName] then
 			table.insert(equippedNames, itemName)
 		end
@@ -140,8 +210,6 @@ end
 equipItemEvent.OnServerEvent:Connect(function(player, itemName, isUnequip)
 	local data = sessionData[player.UserId]
 	if not data then return end
-
-
 
 	local ownsItem = false
 	for _, item in ipairs(data.Inventory) do
@@ -158,18 +226,16 @@ equipItemEvent.OnServerEvent:Connect(function(player, itemName, isUnequip)
 		if index then
 			table.remove(data.Equipped, index)
 		end
-	
+		
 		if #data.Equipped == 0 then
 			table.insert(data.Equipped, "DefaultSword")
 		end
 	else
-
 		data.Equipped = { itemName }
 	end
 
 	inventoryUpdatedEvent:FireClient(player)
 	
-
 	if player.Character then
 		local newSword = data.Equipped[1] or "None"
 		player.Character:SetAttribute("EquippedSword", newSword)
@@ -183,14 +249,100 @@ for _, player in ipairs(Players:GetPlayers()) do
 	task.spawn(loadData, player)
 end
 
-
 local DataService = {}
+
 function DataService.GetEquippedSword(player)
 	local data = sessionData[player.UserId]
 	return data and data.Equipped[1] or "DefaultSword"
 end
 
-_G.DataService = DataService
+function DataService.AddWin(player)
+	local data = sessionData[player.UserId]
+	if not data or not data.Stats then return end
+	
+	data.Stats.Wins = data.Stats.Wins + 1
+	data.Stats.WinStreak = data.Stats.WinStreak + 1
+	
+	if data.Stats.WinStreak > data.Stats.PeakWinStreak then
+		data.Stats.PeakWinStreak = data.Stats.WinStreak
+	end
+	
+	DataService.UpdateLeaderStats(player)
+end
 
+function DataService.AddLoss(player)
+	local data = sessionData[player.UserId]
+	if not data or not data.Stats then return end
+	
+	data.Stats.Losses = data.Stats.Losses + 1
+	data.Stats.WinStreak = 0
+	
+	DataService.UpdateLeaderStats(player)
+end
+
+function DataService.AddXP(player, amount)
+	local data = sessionData[player.UserId]
+	if not data or not data.Stats then return end
+	
+	data.Stats.XP = data.Stats.XP + amount
+	
+	local newLevel = calculateLevelFromXP(data.Stats.XP)
+	DataService.UpdateLeaderStats(player)
+end
+
+function DataService.AddGoal(player)
+	local data = sessionData[player.UserId]
+	if not data or not data.Stats then return end
+	
+	data.Stats.TotalGoals = data.Stats.TotalGoals + 1
+end
+
+function DataService.UpdateLeaderStats(player)
+	local data = sessionData[player.UserId]
+	if not data or not data.Stats then return end
+	
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if not leaderstats then return end
+	
+	local stats = data.Stats
+	local level = calculateLevelFromXP(stats.XP)
+	
+	local winsValue = leaderstats:FindFirstChild("Wins")
+	if winsValue then
+		winsValue.Value = stats.Wins
+	end
+	
+	local winStreakValue = leaderstats:FindFirstChild("Win Streak")
+	if winStreakValue then
+		winStreakValue.Value = stats.WinStreak
+	end
+	
+	local levelValue = leaderstats:FindFirstChild("Level")
+	if levelValue then
+		levelValue.Value = level
+	end
+	
+	statsUpdatedEvent:FireClient(player, stats, level)
+end
+
+function DataService.GetStats(player)
+	local data = sessionData[player.UserId]
+	if not data or not data.Stats then return nil end
+	
+	local stats = data.Stats
+	local level = calculateLevelFromXP(stats.XP)
+	
+	return {
+		Wins = stats.Wins,
+		Losses = stats.Losses,
+		WinStreak = stats.WinStreak,
+		PeakWinStreak = stats.PeakWinStreak,
+		XP = stats.XP,
+		Level = level,
+		TotalGoals = stats.TotalGoals,
+	}
+end
+
+_G.DataService = DataService
 
 return DataService

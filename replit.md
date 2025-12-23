@@ -91,9 +91,39 @@ local isValid, error = MapManager.validateMap(myMap)
 - Goal scoring system
 - Jump mechanics
 - Sword combat
-- Inventory system
+- Inventory system (DefaultSword, Dark Scythe)
 - Developer debug commands
 - **Dynamic map system** - Add maps without code changes
+
+## Player Stats System
+
+### Leaderstats (Shown on Playerlist)
+- **Wins** - Number of games won
+- **Win Streak** - Current consecutive wins (resets on loss)
+- **Level** - Infinite scaling based on XP
+
+### Hidden Stats (Saved but not shown)
+- **Losses** - Total games lost
+- **Peak Win Streak** - Highest win streak achieved
+- **XP** - Total experience points
+- **Total Goals** - Lifetime goals scored
+
+### Level Progression
+- Level starts at 1
+- Level 2 requires 100 XP
+- Level 3 requires 300 XP total (100 + 200)
+- Level 4 requires 600 XP total (100 + 200 + 300)
+- Pattern: Each level needs `(currentLevel × 100)` more XP
+
+### DataService Functions
+```lua
+DataService.AddWin(player) -- Add a win and increment streak
+DataService.AddLoss(player) -- Add a loss and reset streak
+DataService.AddXP(player, amount) -- Add XP and update level
+DataService.AddGoal(player) -- Add to total goals counter
+DataService.GetStats(player) -- Get all stats for a player
+DataService.UpdateLeaderStats(player) -- Refresh leaderstats display
+```
 
 ## ⚠️ ROBLOX STUDIO PROJECT - Cannot Run in Replit
 
