@@ -121,11 +121,18 @@ function GameInstance:Start(p1, p2)
 end
 
 function GameInstance:UpdateBoard(player, boardInfo, color)
+        if not boardInfo then
+                warn("UpdateBoard: boardInfo is nil - map may not have Board parts")
+                return
+        end
+        
         local surface = boardInfo:FindFirstChild("SurfaceGui")
         if surface and surface:FindFirstChild("Frame") then
                 local frame = surface.Frame
                 frame.PlayerName.Text = player.Name
-                boardInfo.Parent.Union.Color = color
+                if boardInfo.Parent and boardInfo.Parent:FindFirstChild("Union") then
+                        boardInfo.Parent.Union.Color = color
+                end
                 task.spawn(function()
                         local content = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
                         frame.PlayerIcon.Image = content
@@ -377,6 +384,14 @@ local function TryStartGame()
                 
                 local gameId = HttpService:GenerateGUID(false)
                 local newGame = GameInstance.new(gameId, freeIndex)
+                
+                if not newGame then
+                        warn("TryStartGame: Failed to create new game instance. Check MapManager for errors.")
+                        table.insert(PlayerQueue, 1, p1)
+                        table.insert(PlayerQueue, 1, p2)
+                        return
+                end
+                
                 ActiveGames[gameId] = newGame
                 
                 newGame:Start(p1, p2)

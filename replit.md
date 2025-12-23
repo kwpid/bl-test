@@ -89,5 +89,26 @@ local isValid, error = MapManager.validateMap(myMap)
 - Developer debug commands
 - **Dynamic map system** - Add maps without code changes
 
-## Note
-These scripts cannot be run outside of the Roblox environment as they depend on Roblox-specific APIs and services. This is a Roblox Studio project file.
+## Important: Roblox Studio Required ⚠️
+**These scripts CANNOT be executed in Replit.** This is a Roblox Studio project that requires the Roblox engine to run.
+
+### To use this project:
+1. Open **Roblox Studio** on your computer
+2. Create or open a game
+3. Copy the Lua scripts from this repository into their respective folders in Studio
+4. Ensure your game has the required parts (T1, T2, Plate1, Plate2, BallSpawn, etc.)
+5. Create map models in ReplicatedStorage/Maps/ (the system will auto-migrate legacy maps)
+6. Run the game in Studio to test
+
+### What Changed in This Version
+- **MapManager.lua** - New module for dynamic map selection
+- **StageHandler.lua** - Updated to use MapManager (no need to edit it for new maps)
+- Maps are now stored in `ReplicatedStorage/Maps/` instead of hardcoded
+- Auto-migration: If no maps exist, the system creates a `Legacy_1v1` map from your existing Workspace.Stage
+
+### Troubleshooting in Studio
+If you get errors when running the game:
+1. Check the **Output** panel in Studio for error messages
+2. Ensure all required services are available (they should be in Studio)
+3. Verify map structure - maps must have BallSpawn, T1, T2 parts
+4. Check that Modules folder exists in ReplicatedStorage
