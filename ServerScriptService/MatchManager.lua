@@ -38,7 +38,7 @@ setupTeams()
 local ModulesFolder = ReplicatedStorage.Modules
 local BallConfig = require(ReplicatedStorage:WaitForChild("BallConfig"))
 local MapManager = require(ReplicatedStorage:WaitForChild("MapManager"))
-local DataService = require(ServerScriptService:WaitForChild("DataService"))
+local DataService = require(ReplicatedStorage:WaitForChild("DataService"))
 local RemoteEventsFolder = ReplicatedStorage:WaitForChild(BallConfig.Paths.REMOTE_EVENTS_FOLDER)
 local ResetBallEvent = RemoteEventsFolder:WaitForChild("ResetBall")
 local GoalScoredEvent = RemoteEventsFolder:WaitForChild("GoalScored")
