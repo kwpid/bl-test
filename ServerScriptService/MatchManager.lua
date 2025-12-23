@@ -71,6 +71,7 @@ function GameInstance.new(gameId, offsetIndex)
         self.TimerRunning = false
         self.IsOvertime = false
         self.OvertimeSeconds = 0
+        self.KickoffInProgress = false
         
         local gameContainer = Instance.new("Folder")
         gameContainer.Name = "Game_" .. gameId
@@ -154,6 +155,7 @@ end
 
 function GameInstance:Kickoff()
         self.TimerRunning = false
+        self.KickoffInProgress = true
         
         self:SetControls(false)
         
@@ -174,6 +176,7 @@ function GameInstance:Kickoff()
         end
         self:SetCountdownText("GO!")
         
+        self.KickoffInProgress = false
         self:SetControls(true)
         self.TimerRunning = true
         task.wait(1)
