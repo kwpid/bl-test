@@ -270,6 +270,21 @@ function GameInstance:EndGame(reason)
                 p:LoadCharacter()
         end
         
+        -- Clean up all balls for this game
+        if self.Arena then
+                local ballsToDestroy = self.Arena:FindFirstChild("Ball", true)
+                if ballsToDestroy then ballsToDestroy:Destroy() end
+        end
+        
+        -- Clean up any remaining balls in the game container
+        if self.GameContainer then
+                for _, obj in ipairs(self.GameContainer:GetDescendants()) do
+                        if obj.Name == "Ball" and obj:IsA("BasePart") then
+                                obj:Destroy()
+                        end
+                end
+        end
+        
         if self.GameContainer then
                 self.GameContainer:Destroy()
         end
