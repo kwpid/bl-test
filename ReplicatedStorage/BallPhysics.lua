@@ -104,7 +104,8 @@ function BallPhysics:update(dt, raycastFunc, groundHeight, radius, onCollision)
 			end
 
 			if onCollision then
-				onCollision()
+				local impactSpeed = math.abs(self.velocity.Y)
+				onCollision(nil, impactSpeed)
 			end
 			break
 		end
@@ -114,7 +115,7 @@ function BallPhysics:update(dt, raycastFunc, groundHeight, radius, onCollision)
 
 			if collision then
 				local normal = collision.Normal
-				local reflectedVelocity = self.velocity - 2 * self.velocity:Dot(normal) * normal
+				local reflectedVelocity = (self.velocity - 2 * self.velocity:Dot(normal) * normal) * Config.Physics.BOUNCE_ENERGY_LOSS
 				self.velocity = reflectedVelocity
 				local distanceTraveled = (collision.Position - self.position).Magnitude
 				local remainingDistance = math.max(0, stepVector.Magnitude - distanceTraveled)
@@ -133,7 +134,8 @@ function BallPhysics:update(dt, raycastFunc, groundHeight, radius, onCollision)
 				end
 
 				if onCollision then
-					onCollision(collision)
+					local impactSpeed = math.abs(self.velocity:Dot(normal))
+					onCollision(collision, impactSpeed)
 				end
 				break
 			else

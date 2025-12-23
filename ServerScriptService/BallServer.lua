@@ -2,6 +2,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
+local Vector3 = Vector3
+local task = task
+local Enum = Enum
+local workspace = workspace
+local Color3 = Color3
+local Instance = Instance
+local RaycastParams = RaycastParams
+local CFrame = CFrame
+local math = math
+
 local BallPhysics = require(ReplicatedStorage.BallPhysics)
 local Config = require(ReplicatedStorage.BallConfig)
 
@@ -34,44 +44,40 @@ if not GoalScoredEvent then
 end
 
 local ballTemplate = ReplicatedStorage:WaitForChild("Ball")
-local ball = workspace:FindFirstChild("Ball")
-if not ball then
-	ball = ballTemplate:Clone()
-	ball.Name = "Ball"
-	ball.Parent = workspace
-end
 
-ball.Anchored = true
-ball.CanCollide = false
-ball:SetAttribute("LastTeam", "None")
-ball.Shape = Enum.PartType.Ball
-ball.Transparency = 1 -- Hide until game starts
+local oldBall = workspace:FindFirstChild("Ball")
+if oldBall then oldBall:Destroy() end
 
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-raycastParams.FilterDescendantsInstances = { ball }
 
-local function getGroundHeightInitial(position)
-	local rayOrigin = Vector3.new(position.X, position.Y + 10, position.Z)
-	local rayDirection = Vector3.new(0, -200, 0)
-	local rayResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-	return rayResult and rayResult.Position.Y or 0
+local function getGameMap(ball)
+	return ball.Parent
 end
 
-local initialGroundHeight = getGroundHeightInitial(ball.Position)
-local spawnPosition = Vector3.new(ball.Position.X, initialGroundHeight + Config.Physics.FLOAT_HEIGHT, ball.Position.Z)
+local function setBallVisuals(ball, enabled)
+	if not ball then return end
+	for _, descendant in ipairs(ball:GetDescendants()) do
+		if descendant:IsA("BasePart") or descendant:IsA("Decal") or descendant:IsA("Texture") then
+			descendant.Transparency = enabled and (descendant:GetAttribute("OriginalTransparency") or 0) or 1
+		elseif descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Beam") then
+			descendant.Enabled = enabled
+		elseif descendant:IsA("Light") then
+			descendant.Enabled = enabled
+		end
+	end
+end
 
-local ballState = BallPhysics.new(spawnPosition)
-ballState.color = ball.Color
-ball.Position = spawnPosition
-
-local lastGroundCheck = 0
-local lastNetworkUpdate = 0
-local ballFrozen = false
-local frozenVelocity = Vector3.new(0, 0, 0)
+local ActiveBalls = {}
 
 local function updateRaycastFilter()
-	local filterList = { ball }
+	local filterList = {}
+	
+	for _, data in pairs(ActiveBalls) do
+		if data.object then
+			table.insert(filterList, data.object)
+		end
+	end
 
 	for _, player in pairs(Players:GetPlayers()) do
 		if player.Character then
@@ -82,16 +88,22 @@ local function updateRaycastFilter()
 			end
 		end
 	end
-
-	-- Exclude Goal Detectors from physics so ball can pass through them
-	local map = workspace:FindFirstChild("1v1_Map", true)
-	if map then
-		local redGoal = map:FindFirstChild("GoalDetectorRed")
-		local blueGoal = map:FindFirstChild("GoalDetectorBlue")
-		if redGoal then table.insert(filterList, redGoal) end
-		if blueGoal then table.insert(filterList, blueGoal) end
+	
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			local name = obj.Name:lower()
+			local isMarker = name == "ballspawn" or name == "t1" or name == "t2" or name:find("plate")
+			local isHitbox = name == "hitbox"
+			local isFloor = name:find("floor") or name:find("field") or name:find("arena")
+			local isTransparent = obj.Transparency >= 0.9 
+			local isMesh = obj:IsA("MeshPart")
+			
+			if isMarker or ((isTransparent or isMesh) and not isHitbox and not isFloor) then
+				table.insert(filterList, obj)
+			end
+		end
 	end
-
+	
 	raycastParams.FilterDescendantsInstances = filterList
 end
 
@@ -102,189 +114,257 @@ Players.PlayerAdded:Connect(function(player)
 	end)
 end)
 
-updateRaycastFilter()
+updateRaycastFilter() 
 
 local function getGroundHeight(position)
-	local rayOrigin = Vector3.new(position.X, position.Y + 10, position.Z)
-	local rayDirection = Vector3.new(0, -200, 0)
+	local rayOrigin = Vector3.new(position.X, position.Y + 5, position.Z)
+	local rayDirection = Vector3.new(0, -500, 0)
 	local rayResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-	return rayResult and rayResult.Position.Y or 0
+	
+	if rayResult then
+		return rayResult.Position.Y
+	end
+	
+	return 0
 end
 
-local function checkCollision(from, to)
+local function checkCollision(from, to, ballSize)
 	local direction = (to - from)
 	local distance = direction.Magnitude
 	if distance == 0 then
 		return nil
 	end
 
-	local rayResult = workspace:Raycast(from, direction.Unit * (distance + ball.Size.X / 2), raycastParams)
+	local rayResult = workspace:Raycast(from, direction.Unit * (distance + ballSize / 2), raycastParams)
+	if rayResult then
+		print("Ball Hit:", rayResult.Instance:GetFullName())
+	end
 	return rayResult
 end
 
-local currentGroundHeight = 0
-
 RunService.Heartbeat:Connect(function(dt)
-	local updated = false
-	if not ballFrozen then
-		lastGroundCheck = lastGroundCheck + dt
-		if lastGroundCheck > 0.1 then
-			currentGroundHeight = getGroundHeight(ballState.position)
-			lastGroundCheck = 0
-		end
-
-		updated = ballState:update(dt, checkCollision, currentGroundHeight, ball.Size.X / 2)
-		ballState:enforceFloatHeight(currentGroundHeight)
-	end
-
-	ball.Position = ballState.position
-	ball.Color = ballState.color
-	ball.Transparency = ballState.transparency or 0
-
-	-- Goal Detection
-	if not ballFrozen and ballState.isMoving then
-		local map = workspace:FindFirstChild("1v1_Map", true) -- Search descendants
-		if map then
-			local redGoal = map:FindFirstChild("GoalDetectorRed")
-			local blueGoal = map:FindFirstChild("GoalDetectorBlue")
+	local hasUpdate = false
+	
+	for gameId, data in pairs(ActiveBalls) do
+		local ball = data.object
+		
+		if ball and ball.Parent then
+			local ballState = data.state
+			local ballFrozen = data.frozen
+			local updated = false
 			
-			if not redGoal or not blueGoal then
-				warn("Goal detectors not found in map! Red:", redGoal ~= nil, "Blue:", blueGoal ~= nil)
-			end
-			
-			local function isPointInPart(point, part, radius)
-				radius = radius or 0
-				local relativePos = part.CFrame:PointToObjectSpace(point)
-				return math.abs(relativePos.X) <= (part.Size.X/2 + radius)
-					and math.abs(relativePos.Y) <= (part.Size.Y/2 + radius)
-					and math.abs(relativePos.Z) <= (part.Size.Z/2 + radius)
-			end
-
-			if redGoal then
-				local dist = (ball.Position - redGoal.Position).Magnitude
-				local isInside = isPointInPart(ball.Position, redGoal, ball.Size.X / 2)
+			if not ballFrozen then
+				data.lastGroundCheck = data.lastGroundCheck + dt
+				local currentGroundHeight = 0
 				
-				if isInside or dist <= 6 then -- Lenient distance check (6 studs)
-					print("GOAL DETECTION: BALL IN RED GOAL! dist:", dist, "inside:", isInside)
-					ballFrozen = true
-					ball.Transparency = 1
-					ballState.transparency = 1 -- Sync to client
-					ball.Anchored = true
+				if data.lastGroundCheck > 0.1 then
+					currentGroundHeight = getGroundHeight(ballState.position)
+					data.lastGroundCheck = 0
+					data.cachedGroundHeight = currentGroundHeight 
+				else
+					currentGroundHeight = data.cachedGroundHeight or 0
+				end
+
+				updated = ballState:update(dt, function(a, b) 
+					return checkCollision(a, b, ball.Size.X) 
+				end, currentGroundHeight, ball.Size.X / 2, function(collision)
+					if ball:FindFirstChild("Bounce") then
+						ball.Bounce:Play()
+					end
+				end)
+				
+				ballState:enforceFloatHeight(currentGroundHeight)
+				
+				local isGrounded = (ballState.position.Y <= currentGroundHeight + Config.Physics.FLOAT_HEIGHT + 0.1)
+				if ball:GetAttribute("Grounded") ~= isGrounded then
+					ball:SetAttribute("Grounded", isGrounded)
+				end
+			end
+
+			ball.Position = ballState.position
+			ball.Color = ballState.color
+			ball.Transparency = ballState.transparency or 0
+
+			if not ballFrozen and ballState.isMoving then
+				local map = ball.Parent 
+				if map then
+					local redGoal = map:FindFirstChild("GoalDetectorRed", true)
+					local blueGoal = map:FindFirstChild("GoalDetectorBlue", true)
 					
-					-- Fire one final update to ensure transparency is synced
-					RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
+					if not redGoal or not blueGoal then
+						warn("Goal detectors not found in map! Red:", redGoal ~= nil, "Blue:", blueGoal ~= nil)
+					end
+
+					local function isPointInPart(point, part, radius)
+						radius = radius or 0
+						local relativePos = part.CFrame:PointToObjectSpace(point)
+						return math.abs(relativePos.X) <= (part.Size.X/2 + radius)
+							and math.abs(relativePos.Y) <= (part.Size.Y/2 + radius)
+							and math.abs(relativePos.Z) <= (part.Size.Z/2 + radius)
+					end
+
+					if redGoal then
+						local dist = (ball.Position - redGoal.Position).Magnitude
+						local isInside = isPointInPart(ball.Position, redGoal, ball.Size.X / 2)
+						
+						if isInside or dist <= 6 then
+							local lastTeam = ball:GetAttribute("LastTeam")
+							if lastTeam == "blue" then
+								data.frozen = true
+								ball.Anchored = true
+								setBallVisuals(ball, false)
+								ballState.transparency = 1
+								
+								RemoteEvents.ballUpdate:FireAllClients(ballState:serialize(), gameId)
+								GoalScoredEvent:Fire("blue", gameId, ballState.lastHitter)
+								
+								ball:Destroy()
+								ball = nil
+								ActiveBalls[gameId] = nil
+								return
+							end
+						end
+					end
 					
-					GoalScoredEvent:Fire("blue") -- Red goal = Blue scores
-				elseif dist < 25 then
-					-- Still log for debugging
-					if tick() % 0.5 < 0.05 then
-						print(string.format("DEBUG: Ball near RED goal: Dist=%.2f, BallPos=%s", dist, tostring(ball.Position)))
+					if blueGoal then
+						local dist = (ball.Position - blueGoal.Position).Magnitude
+						local isInside = isPointInPart(ball.Position, blueGoal, ball.Size.X / 2)
+						
+						if isInside or dist <= 6 then
+							local lastTeam = ball:GetAttribute("LastTeam")
+							if lastTeam == "red" then
+								data.frozen = true
+								ball.Anchored = true
+								setBallVisuals(ball, false)
+								ballState.transparency = 1
+								
+								RemoteEvents.ballUpdate:FireAllClients(ballState:serialize(), gameId)
+								GoalScoredEvent:Fire("red", gameId, ballState.lastHitter)
+								
+								ball:Destroy()
+								ball = nil
+								ActiveBalls[gameId] = nil
+								return
+							end
+						end
 					end
 				end
 			end
-			
-			if blueGoal then
-				local dist = (ball.Position - blueGoal.Position).Magnitude
-				local isInside = isPointInPart(ball.Position, blueGoal, ball.Size.X / 2)
-				
-				if isInside or dist <= 6 then -- Lenient distance check (6 studs)
-					print("GOAL DETECTION: BALL IN BLUE GOAL! dist:", dist, "inside:", isInside)
-					ballFrozen = true
-					ball.Transparency = 1
-					ballState.transparency = 1 -- Sync to client
-					ball.Anchored = true
-					
-					-- Fire one final update to ensure transparency is synced
-					RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
-					
-					GoalScoredEvent:Fire("red") -- Blue goal = Red scores
-				elseif dist < 25 then
-					-- Still log for debugging
-					if tick() % 0.5 < 0.05 then
-						print(string.format("DEBUG: Ball near BLUE goal: Dist=%.2f, BallPos=%s", dist, tostring(ball.Position)))
+
+			data.lastNetworkUpdate = data.lastNetworkUpdate + dt
+			if data.lastNetworkUpdate >= 1 / Config.Network.UPDATE_RATE then
+				if updated or ballState.isMoving or ballFrozen then
+					local serialized = ballState:serialize()
+					for _, player in ipairs(Players:GetPlayers()) do
+						if player:GetAttribute("GameId") == gameId then
+							RemoteEvents.ballUpdate:FireClient(player, serialized, gameId)
+						end
 					end
 				end
+				data.lastNetworkUpdate = 0
 			end
 		else
-			if tick() % 10 < 0.1 then -- Log occasionally
-				warn("1v1_Map not found in workspace for goal detection.")
-			end
+			ActiveBalls[gameId] = nil 
+			updateRaycastFilter() 
 		end
-	end
-
-	lastNetworkUpdate = lastNetworkUpdate + dt
-	if lastNetworkUpdate >= 1 / Config.Network.UPDATE_RATE then
-		-- Always send update if moving, or if updated, or if recently hit/goal
-		if updated or ballState.isMoving or ballFrozen then
-			RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
-		end
-		lastNetworkUpdate = 0
 	end
 end)
 
-local lastHitTime = 0
+local lastHitTime = {} 
 
 ServerEvents.ballHit.Event:Connect(function(player, cameraDirection)
-	print("BallServer: Received ballHit from player:", player.Name)
-	local currentTime = tick()
-	if currentTime - lastHitTime < Config.Parry.MIN_HIT_INTERVAL then
-		return
-	end
-
-	if not cameraDirection or typeof(cameraDirection) ~= "Vector3" then
-		return
-	end
-
-	if cameraDirection.Magnitude < 0.001 then
-		warn("Invalid camera direction from player: " .. player.Name)
-		return
-	end
-
-	lastHitTime = currentTime
+	local gameId = player:GetAttribute("GameId")
+	if not gameId or not ActiveBalls[gameId] then return end
+	
+	local data = ActiveBalls[gameId]
+	local ballState = data.state
+	
+	if cameraDirection.Magnitude < 0.001 then return end
 
 	ballState:applyHit(cameraDirection, nil, player.Name)
 
-	-- Update ball color based on team
 	local team = player:GetAttribute("Team")
-	print("Ball hit by player:", player.Name, "Team:", team)
+
 	if team == "red" then
 		ballState.color = Color3.fromRGB(255, 0, 0)
 	elseif team == "blue" then
 		ballState.color = Color3.fromRGB(0, 0, 255)
 	end
-	ball.Color = ballState.color
-	ball:SetAttribute("LastTeam", team)
+	data.object.Color = ballState.color
+	data.object:SetAttribute("LastTeam", team)
 	ballState.lastHitter = player.Name
 
-	local serialized = ballState:serialize()
-
-	RemoteEvents.ballUpdate:FireAllClients(serialized)
+	RemoteEvents.ballUpdate:FireAllClients(ballState:serialize(), gameId)
 end)
 
-local function resetBall(position)
-	ballState = BallPhysics.new(position)
-	ballState.transparency = 0 -- Initialize transparency
-	ballState.color = Color3.new(1, 1, 1) -- Reset to white
+local function SetupBallForGame(position, gameId, parentFolder)
+	if not gameId then return end
+	
+	local ground = getGroundHeight(position)
+	print("BallServer: Spawning at", position, "Detected Ground:", ground)
+
+	local data = ActiveBalls[gameId]
+	if data and data.object then
+		data.object:Destroy()
+		data.object = nil
+	end
+
+	local ball = ballTemplate:Clone()
+	ball.Name = "Ball" 
+	ball.Parent = parentFolder or workspace
+	
+	data = {
+		object = ball,
+		state = nil, 
+		frozen = false,
+		frozenVelocity = Vector3.zero,
+		lastGroundCheck = 0,
+		lastNetworkUpdate = 0,
+		cachedGroundHeight = ground,
+	}
+	ActiveBalls[gameId] = data
+	updateRaycastFilter()
+
+	local ballState = BallPhysics.new(position)
+	ballState.transparency = 0
+	ballState.color = Color3.new(1, 1, 1)
+	
 	ball.Position = position
 	ball.Color = ballState.color
-	ball.Transparency = 0.8 -- Semi-visible on server for debugging
+	ball.Anchored = true
+	ball.CanCollide = false
+	setBallVisuals(ball, true) 
+	ball.Transparency = 1
+	ball:SetAttribute("LastTeam", "None")
+	ball:SetAttribute("GameId", gameId) 
+
+	for _, desc in ipairs(ball:GetDescendants()) do
+		if desc:IsA("BasePart") or desc:IsA("Decal") or desc:IsA("Texture") then
+			desc.Transparency = 1
+		elseif desc:IsA("ParticleEmitter") or desc:IsA("Trail") or desc:IsA("Beam") then
+			desc.Enabled = false
+		elseif desc:IsA("Light") then
+			desc.Enabled = false
+		end
+	end
+
 	ballState.transparency = 0
 	ballState.lastHitter = "None"
-	ball:SetAttribute("LastTeam", "None")
-	ball.CanCollide = false
-	ball.Anchored = true -- Script handles movement, must be anchored
-	ballFrozen = false -- Unfreeze on reset
 	
-	-- Fire update to sync reset state
-	RemoteEvents.ballUpdate:FireAllClients(ballState:serialize())
+	data.state = ballState
+	
+	ballState:enforceFloatHeight(ground)
+	ball.Position = ballState.position
+	
+	RemoteEvents.ballUpdate:FireAllClients(ballState:serialize(), gameId)
 end
 
-ResetBallEvent.Event:Connect(resetBall)
+ResetBallEvent.Event:Connect(SetupBallForGame)
 
--- reset ball (debug)
+
 local debugResetEvent = RemoteEventsFolder:FindFirstChild("DebugReset")
 
-debugResetEvent.OnServerEvent:Connect(function(player)
+debugResetEvent.OnServerEvent:Connect(function(player, gameId)
 	local isDev = false
 
 	for _, id in ipairs(Config.Debug.DeveloperIds) do
@@ -294,16 +374,20 @@ debugResetEvent.OnServerEvent:Connect(function(player)
 		end
 	end
 
-	if isDev then
-		resetBall(spawnPosition)
+	if isDev and gameId and ActiveBalls[gameId] then
+		local data = ActiveBalls[gameId]
+		local ball = data.object
+		local initialGroundHeight = getGroundHeight(ball.Position)
+		local spawnPosition = Vector3.new(ball.Position.X, initialGroundHeight + Config.Physics.FLOAT_HEIGHT, ball.Position.Z)
+		SetupBallForGame(spawnPosition, gameId, ball.Parent)
 	end
 end)
 
--- freeze ball (debug)
+
 local debugFreezeEvent = RemoteEventsFolder:FindFirstChild("DebugFreeze")
 
 
-debugFreezeEvent.OnServerEvent:Connect(function(player)
+debugFreezeEvent.OnServerEvent:Connect(function(player, gameId)
 	local isDev = false
 	for _, id in ipairs(Config.Debug.DeveloperIds) do
 		if player.UserId == id then
@@ -312,16 +396,17 @@ debugFreezeEvent.OnServerEvent:Connect(function(player)
 		end
 	end
 
-	if isDev then
-		ballFrozen = true
-		frozenVelocity = ballState.velocity
+	if isDev and gameId and ActiveBalls[gameId] then
+		local data = ActiveBalls[gameId]
+		data.frozen = true
+		data.frozenVelocity = data.state.velocity
 	end
 end)
 
--- unfreeze ball (debug)
+
 local debugUnfreezeEvent = RemoteEventsFolder:FindFirstChild("DebugUnfreeze")
 
-debugUnfreezeEvent.OnServerEvent:Connect(function(player)
+debugUnfreezeEvent.OnServerEvent:Connect(function(player, gameId)
 	local isDev = false
 	for _, id in ipairs(Config.Debug.DeveloperIds) do
 		if player.UserId == id then
@@ -330,8 +415,9 @@ debugUnfreezeEvent.OnServerEvent:Connect(function(player)
 		end
 	end
 
-	if isDev then
-		ballFrozen = false
-		ballState.velocity = frozenVelocity
+	if isDev and gameId and ActiveBalls[gameId] then
+		local data = ActiveBalls[gameId]
+		data.frozen = false
+		data.state.velocity = data.frozenVelocity
 	end
 end)

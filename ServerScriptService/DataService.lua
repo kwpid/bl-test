@@ -4,7 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local InventoryDataStore = DataStoreService:GetDataStore("PlayerInventory_v1")
 
--- Remote Setup
+
 local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 if not remoteEvents then
 	remoteEvents = Instance.new("Folder")
@@ -30,14 +30,15 @@ local sellItemEvent = createRemote("RemoteEvent", "SellItemEvent")
 local sellAllItemEvent = createRemote("RemoteEvent", "SellAllItemEvent")
 local toggleLockItemEvent = createRemote("RemoteEvent", "ToggleLockItemEvent")
 
--- Player Data Cache
+
 local sessionData = {}
 
--- Items Configuration (Template)
+
 local SWORD_DEFINITIONS = {
 	["DefaultSword"] = {
 		Name = "DefaultSword",
-		RobloxId = 1133333333, -- Placeholder if not provided, but GUI uses it for icons
+		RobloxId = 1133333333,
+
 		Value = 0,
 		Rarity = "Common",
 	},
@@ -72,14 +73,36 @@ local function loadData(player)
 	if success and data then
 		sessionData[userId] = data
 	else
-		-- New player or load failed
 		sessionData[userId] = {
-			Inventory = {
-				getFullItemData("DefaultSword"),
-				getFullItemData("Dark Scythe")
-			},
-			Equipped = { "DefaultSword" } -- Array of equipped names (assuming one for now)
+			Inventory = {},
+			Equipped = {}
 		}
+	end
+
+	local STARTER_ITEMS = { "DefaultSword", "Dark Scythe" }
+
+
+	local inventory = sessionData[userId].Inventory
+	
+
+	local ownedItems = {}
+	for _, item in ipairs(inventory) do
+		ownedItems[item.Name] = true
+	end
+
+
+	for _, itemName in ipairs(STARTER_ITEMS) do
+		if not ownedItems[itemName] then
+			local itemData = getFullItemData(itemName)
+			if itemData then
+				table.insert(inventory, itemData)
+			end
+		end
+	end
+
+
+	if #sessionData[userId].Equipped == 0 then
+		table.insert(sessionData[userId].Equipped, "DefaultSword")
 	end
 end
 
@@ -92,7 +115,7 @@ local function saveData(player)
 	end
 end
 
--- Remote Handlers
+
 getInventoryFunction.OnServerInvoke = function(player)
 	local data = sessionData[player.UserId]
 	return data and data.Inventory or {}
@@ -100,53 +123,56 @@ end
 
 getEquippedItemsFunction.OnServerInvoke = function(player)
 	local data = sessionData[player.UserId]
-	-- GUI expects a list of RobloxIds or Names? 
-	-- Looking at InventoryGUI.lua line 135: for _, robloxId in ipairs(equippedResult) do
-	-- It expects RobloxIds.
+	local data = sessionData[player.UserId]
+
 	if not data then return {} end
 	
-	local equippedIds = {}
+	local equippedNames = {}
 	for _, itemName in ipairs(data.Equipped) do
-		local def = SWORD_DEFINITIONS[itemName]
-		if def then
-			table.insert(equippedIds, def.RobloxId)
+
+		if SWORD_DEFINITIONS[itemName] then
+			table.insert(equippedNames, itemName)
 		end
 	end
-	return equippedIds
+	return equippedNames
 end
 
-equipItemEvent.OnServerEvent:Connect(function(player, robloxId, isUnequip)
+equipItemEvent.OnServerEvent:Connect(function(player, itemName, isUnequip)
 	local data = sessionData[player.UserId]
 	if not data then return end
 
-	-- Find item name by RobloxId
-	local itemName = nil
+
+
+	local ownsItem = false
 	for _, item in ipairs(data.Inventory) do
-		if item.RobloxId == robloxId then
-			itemName = item.Name
+		if item.Name == itemName then
+			ownsItem = true
 			break
 		end
 	end
 
-	if not itemName then return end
+	if not ownsItem then return end
 
 	if isUnequip then
 		local index = table.find(data.Equipped, itemName)
 		if index then
 			table.remove(data.Equipped, index)
 		end
+	
+		if #data.Equipped == 0 then
+			table.insert(data.Equipped, "DefaultSword")
+		end
 	else
-		-- Only allow one equipped at a time for swords?
+
 		data.Equipped = { itemName }
 	end
 
 	inventoryUpdatedEvent:FireClient(player)
 	
-	-- Tell SwordServer to refresh
+
 	if player.Character then
-		-- Fire custom attribute or bindable?
-		-- We'll just trigger character reload or equipment update logic in SwordServer
-		local swordServer = player.Character:SetAttribute("EquippedSword", data.Equipped[1] or "None")
+		local newSword = data.Equipped[1] or "None"
+		player.Character:SetAttribute("EquippedSword", newSword)
 	end
 end)
 
@@ -157,14 +183,14 @@ for _, player in ipairs(Players:GetPlayers()) do
 	task.spawn(loadData, player)
 end
 
--- Export for other server scripts
+
 local DataService = {}
 function DataService.GetEquippedSword(player)
 	local data = sessionData[player.UserId]
 	return data and data.Equipped[1] or "DefaultSword"
 end
 
-_G.DataService = DataService -- Simple way to share across scripts if not using ModuleScript
+_G.DataService = DataService
 
-print("DataService initialized")
+
 return DataService

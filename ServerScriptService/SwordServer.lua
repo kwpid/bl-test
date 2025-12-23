@@ -42,7 +42,6 @@ local function cloneAttachment(parent, template, name)
 end
 
 local function equipSword(character, swordModel)
-        -- Cleanup existing sword
         local existing = character:FindFirstChild("HipSword")
         if existing then existing:Destroy() end
         local existingWeld = character:FindFirstChild("Torso") and character.Torso:FindFirstChild("SwordWeld")
@@ -115,7 +114,19 @@ local function createParryWindow(player, character, animator, animations, weld, 
                 
                 if parryWindow.hitBall then return end
                 
-                local ball = workspace:FindFirstChild("Ball")
+                local myGameId = player:GetAttribute("GameId")
+                local ball = nil
+        
+                if not parryWindow.cachedBall then
+                    for _, desc in ipairs(workspace:GetDescendants()) do
+                        if desc.Name == "Ball" and desc:GetAttribute("GameId") == myGameId then
+                            parryWindow.cachedBall = desc
+                            break
+                        end
+                    end
+                end
+                ball = parryWindow.cachedBall
+
                 if not ball then return end
                 
                 local hrp = character:FindFirstChild("HumanoidRootPart")
@@ -134,7 +145,6 @@ local function createParryWindow(player, character, animator, animations, weld, 
                 end
                 
                 local distance = (hrp.Position - ball.Position).Magnitude
-                print(string.format("SwordServer: Player %s HRB pos: %s, Ball pos: %s, Dist: %.2f, Range: %.2f", player.Name, tostring(hrp.Position), tostring(ball.Position), distance, parryWindow.parryRange))
                 
                 if distance <= parryWindow.parryRange then
                         parryWindow.hitBall = true
@@ -152,7 +162,6 @@ local function createParryWindow(player, character, animator, animations, weld, 
                         parryTrack:Play()
                         
                         task.wait(0.05)
-                        print("SwordServer: Firing ballHit for player:", player.Name)
                         ServerEvents.ballHit:Fire(player, parryWindow.cameraDirection)
                         
                         parryTrack.Stopped:Connect(function()
@@ -267,7 +276,6 @@ local function onDeviceType(player, deviceType)
                         return
                 end
                 data.deviceType = deviceType
-                print("Player " .. player.Name .. " device type set to: " .. deviceType)
         end
 end
 
@@ -278,54 +286,54 @@ local function onCharacterAdded(character)
         local player = Players:GetPlayerFromCharacter(character)
         if not player then return end
 
-        local equippedName = "DefaultSword"
-        if _G.DataService then
-                equippedName = _G.DataService.GetEquippedSword(player)
-        end
+        	local equippedName = "DefaultSword"
+	if _G.DataService then
+		equippedName = _G.DataService.GetEquippedSword(player)
+	end
 
-        local swordModel = SWORD_FOLDER:FindFirstChild(equippedName)
-        if swordModel then
-                task.wait(0.5)
-                equipSword(character, swordModel)
-        end
-
-        -- Listen for dynamic changes
-        character:GetAttributeChangedSignal("EquippedSword"):Connect(function()
-                local newSwordName = character:GetAttribute("EquippedSword")
-                if newSwordName and newSwordName ~= "None" then
-                        local model = SWORD_FOLDER:FindFirstChild(newSwordName)
-                        if model then
-                                equipSword(character, model)
-                        end
-                else
-                        -- Unequip
-                        local existing = character:FindFirstChild("HipSword")
-                        if existing then existing:Destroy() end
-                end
-        end)
+	local swordModel = SWORD_FOLDER:FindFirstChild(equippedName)
+	if swordModel then
+		task.wait(0.5)
+		equipSword(character, swordModel)
+	else
+		local firstSword = SWORD_FOLDER:GetChildren()[1]
+		if firstSword then
+			equipSword(character, firstSword)
+		end
+	end
+	character:GetAttributeChangedSignal("EquippedSword"):Connect(function()
+		local newSwordName = character:GetAttribute("EquippedSword")
+		if newSwordName and newSwordName ~= "None" then
+			local model = SWORD_FOLDER:FindFirstChild(newSwordName)
+			if model then
+				equipSword(character, model)
+			end
+		else
+			local existing = character:FindFirstChild("HipSword")
+			if existing then existing:Destroy() end
+		end
+	end)
 end
 
 local function onPlayerAdded(player)
-        playerData[player.UserId] = {
-                cooldown = false,
-                deviceType = nil,
-        }
-        
-        player.CharacterAdded:Connect(onCharacterAdded)
-        if player.Character then
-                onCharacterAdded(player.Character)
-        end
+	playerData[player.UserId] = {
+		cooldown = false,
+		deviceType = nil,
+	}
+	
+	player.CharacterAdded:Connect(onCharacterAdded)
+	if player.Character then
+		onCharacterAdded(player.Character)
+	end
 end
 
 local function onPlayerRemoving(player)
-        playerData[player.UserId] = nil
+	playerData[player.UserId] = nil
 end
 
 Players.PlayerAdded:Connect(onPlayerAdded)
 Players.PlayerRemoving:Connect(onPlayerRemoving)
 
 for _, player in pairs(Players:GetPlayers()) do
-        onPlayerAdded(player)
+	onPlayerAdded(player)
 end
-
-print("Sword server initialized")

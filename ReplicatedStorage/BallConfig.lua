@@ -19,7 +19,7 @@ BallConfig.Physics = {
 
 	MIN_BOUNCE_ANGLE = 45,
 	MIN_BOUNCE_SPEED = 30,
-	MAX_BOUNCES = 2,
+	MAX_BOUNCES = 1,
 	GROUND_BOUNCE_ENERGY_LOSS = 0.9,
 }
 
@@ -36,7 +36,7 @@ BallConfig.Parry = {
 }
 
 BallConfig.Network = {
-	UPDATE_RATE = 60,
+	UPDATE_RATE = 30,
 	INTERPOLATION_DELAY = 0.1,
 }
 

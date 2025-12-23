@@ -2,8 +2,21 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local Players = game:GetService("Players")
 local Teams = game:GetService("Teams")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local Teams = game:GetService("Teams")
 
--- Ensure teams exist
+local Vector3 = Vector3
+local task = task
+local Enum = Enum
+local workspace = workspace
+local Color3 = Color3
+local Instance = Instance
+local BrickColor = BrickColor
+local RaycastParams = RaycastParams
+local CFrame = CFrame
+local math = math
+
 local function setupTeams()
 	if not Teams:FindFirstChild("Lobby") then
 		local lobby = Instance.new("Team")
@@ -23,459 +36,538 @@ end
 setupTeams()
 
 local ModulesFolder = ReplicatedStorage.Modules
-local HttpService = game:GetService("HttpService")
-
 local Configs = script.Parent.Config
 local BallConfig = require(ReplicatedStorage:WaitForChild("BallConfig"))
 local RemoteEventsFolder = ReplicatedStorage:WaitForChild(BallConfig.Paths.REMOTE_EVENTS_FOLDER)
 local ResetBallEvent = RemoteEventsFolder:WaitForChild("ResetBall")
 local GoalScoredEvent = RemoteEventsFolder:WaitForChild("GoalScored")
 
-local redScore = 0
-local blueScore = 0
-local remainingTime = 120 -- 2 minutes
-local clockRunning = false
-
 local Zones = require(ModulesFolder.Zone)
 
-local Plate1Container = script.Parent.Plate1.Zone
-
-local Plate2Container = script.Parent.Plate2.Zone
-
-local MainBoard = script.Parent.MainBoard
-
-local Plate1Board = script.Parent.Plate1.Board
-
-local Plate2Board = script.Parent.Plate2.Board
-
-local T1 = script.Parent.T1
-
-local T2 = script.Parent.T2
-
-local BallSpawn = script.Parent:FindFirstChild("BallSpawn")
-
-local Plate1HasPlayer = false
-
-local Plate2HasPlayer = false
-
-local countdownRunning = false
-
-local InProgress = false
-
-local timerRunning = true
-
-local gameDuration = Configs.GameDuration.Value --In seconds, so if both players are alive, then it will end the game
-
-local Zone1 = Zones.new(Plate1Container)
-
-local Zone2 = Zones.new(Plate2Container)
-
-local thumbType = Enum.ThumbnailType.HeadShot
-
-local thumbSize = Enum.ThumbnailSize.Size420x420
-
-local playersWaiting = {}
-
-local teleportCFrames = {
-	T1.CFrame,
-	T2.CFrame,
+local MapContainer = script.Parent 
+local TemplateParts = {
+	"Plate1", "Plate2", "MainBoard", "T1", "T2", "BallSpawn", "1v1_Map"
 }
 
-local function Reset(excludedPlayer)
-	for _, player in ipairs(playersWaiting) do
-		if player.Name ~= (excludedPlayer and excludedPlayer.Name) then
-			player:SetAttribute("Team", nil)
-			player:SetAttribute("GameId", nil)
-			player.Team = Teams:FindFirstChild("Lobby")
-			player:LoadCharacter()
-		end
-	end
+local GameTemplate = Instance.new("Model")
+GameTemplate.Name = "GameTemplate"
 
-	if #playersWaiting ~= Configs.MaxPlayers.Value then
-		print(("player '%s' won!"):format(playersWaiting[1].Name))
-	end
-
-	SetGameUIVisibility(false)
-	playersWaiting = {}
-	Plate1HasPlayer = false
-	Plate2HasPlayer = false
-
-	Plate1Board.SurfaceGui.Frame.PlayerIcon.Image = "rbxassetid://9319891706"
-	Plate1Board.SurfaceGui.Frame.PlayerName.Text = "..."
-	Plate2Board.SurfaceGui.Frame.PlayerIcon.Image = "rbxassetid://9319891706"
-	Plate2Board.SurfaceGui.Frame.PlayerName.Text = "..."
-
-	MainBoard.SurfaceGui.Frame.Status.Text = "Waiting..."
-	timerRunning = true
-
-	Plate1Board.Parent.Union.Color = Color3.new(1, 1, 1)
-	Plate2Board.Parent.Union.Color = Color3.new(1, 1, 1)
-	
-	redScore = 0
-	blueScore = 0
-	remainingTime = 120
-	clockRunning = false
-	UpdateScoreUI()
-	UpdateClockUI()
-end
-
-function SetGameUIVisibility(visible, gameId)
-	for _, player in ipairs(playersWaiting) do
-		local gui = player:FindFirstChild("PlayerGui")
-		if gui then
-			local gameGui = gui:FindFirstChild("GameGUI")
-			if gameGui then
-				local screen = gameGui:FindFirstChild("GameScreen")
-				if screen then
-					screen.Visible = visible
-					if visible and gameId then
-						screen:SetAttribute("GameId", gameId)
-					else
-						screen:SetAttribute("GameId", nil)
-					end
-				end
-			end
-		end
+for _, name in ipairs(TemplateParts) do
+	local part = MapContainer:FindFirstChild(name)
+	if part then
+		local clone = part:Clone()
+		clone.Parent = GameTemplate
+	else
+		warn("StageHandler: Could not find template part:", name)
 	end
 end
 
-function UpdateScoreUI()
-	for _, player in ipairs(Players:GetPlayers()) do
-		local gui = player:FindFirstChild("PlayerGui")
-		if gui then
-			local gameGui = gui:FindFirstChild("GameGUI")
-			if gameGui then
-				local redLabel = gameGui:FindFirstChild("GameScreen") and gameGui.GameScreen:FindFirstChild("Red") and gameGui.GameScreen.Red:FindFirstChild("RedScore")
-				local blueLabel = gameGui:FindFirstChild("GameScreen") and gameGui.GameScreen:FindFirstChild("Blue") and gameGui.GameScreen.Blue:FindFirstChild("BlueScore")
-				if redLabel then redLabel.Text = tostring(redScore) end
-				if blueLabel then blueLabel.Text = tostring(blueScore) end
-			end
-		end
+local GameInstance = {}
+GameInstance.__index = GameInstance
+
+local ActiveGames = {} 
+local PlayerQueue = {}
+
+function GameInstance.new(gameId, offsetIndex)
+	local self = setmetatable({}, GameInstance)
+	self.GameId = gameId
+	self.OffsetIndex = offsetIndex
+	self.Players = {} 
+	self.Scores = { red = 0, blue = 0 }
+	self.RemainingTime = 120 
+	self.InProgress = false
+	self.TimerRunning = false
+	self.IsOvertime = false
+	self.OvertimeSeconds = 0
+	
+	local offsetPos = Vector3.new(offsetIndex * 300, 0, 0)
+	self.Arena = GameTemplate:Clone()
+	self.Arena.Name = "Arena_" .. gameId
+	self.Arena:PivotTo(self.Arena:GetPivot() + offsetPos)
+	self.Arena.Parent = MapContainer
+	
+	self.Refs = {
+		Plate1 = self.Arena:FindFirstChild("Plate1"),
+		Plate2 = self.Arena:FindFirstChild("Plate2"),
+		Board1 = self.Arena:FindFirstChild("Plate1").Board,
+		Board2 = self.Arena:FindFirstChild("Plate2").Board,
+		MainBoard = self.Arena:FindFirstChild("MainBoard"),
+		T1 = self.Arena:FindFirstChild("T1"),
+		T2 = self.Arena:FindFirstChild("T2"),
+		BallSpawn = self.Arena:FindFirstChild("BallSpawn"),
+	}
+
+	return self
+end
+
+function GameInstance:Start(p1, p2)
+	self.Players = {p1, p2}
+	self.InProgress = true
+	
+	p1:SetAttribute("GameId", self.GameId)
+	p1:SetAttribute("Team", "red")
+	p1.Team = Teams:FindFirstChild("In-Game")
+	
+	p2:SetAttribute("GameId", self.GameId)
+	p2:SetAttribute("Team", "blue")
+	p2.Team = Teams:FindFirstChild("In-Game")
+	
+	self:ConnectDeaths()
+	
+	self:UpdateBoard(p1, self.Refs.Board1, Color3.new(1,0,0))
+	self:UpdateBoard(p2, self.Refs.Board2, Color3.new(0,0,1))
+	
+	if p1.Character and p1.Character.PrimaryPart then
+		p1.Character.PrimaryPart.CFrame = self.Refs.T1.CFrame + Vector3.new(0, 3, 0)
+	end
+	if p2.Character and p2.Character.PrimaryPart then
+		p2.Character.PrimaryPart.CFrame = self.Refs.T2.CFrame + Vector3.new(0, 3, 0)
+	end
+
+	self:SetGameUIVisibility(true)
+	self:UpdateScoreUI()
+	
+	task.spawn(function()
+		self:Kickoff()
+	end)
+	
+	task.spawn(function()
+		self:RunTimer()
+	end)
+end
+
+function GameInstance:UpdateBoard(player, boardInfo, color)
+	local surface = boardInfo:FindFirstChild("SurfaceGui")
+	if surface and surface:FindFirstChild("Frame") then
+		local frame = surface.Frame
+		frame.PlayerName.Text = player.Name
+		boardInfo.Parent.Union.Color = color
+		task.spawn(function()
+			local content = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+			frame.PlayerIcon.Image = content
+		end)
 	end
 end
 
-function UpdateClockUI()
-	local minutes = math.floor(remainingTime / 60)
-	local seconds = remainingTime % 60
-	local timeStr = string.format("%d:%02d", minutes, seconds)
+function GameInstance:Kickoff()
+	self.TimerRunning = false
 	
-	for _, player in ipairs(Players:GetPlayers()) do
-		local gui = player:FindFirstChild("PlayerGui")
-		if gui then
-			local gameGui = gui:FindFirstChild("GameGUI")
-			if gameGui then
-				local clockLabel = gameGui:FindFirstChild("GameScreen") and gameGui.GameScreen:FindFirstChild("Clock") and gameGui.GameScreen.Clock:FindFirstChild("ClockText")
-				if clockLabel then clockLabel.Text = timeStr end
-			end
-		end
+	self:SetControls(false)
+	
+	if self.Players[1].Character and self.Players[1].Character.PrimaryPart then
+		self.Players[1].Character.PrimaryPart.CFrame = self.Refs.T1.CFrame + Vector3.new(0, 3, 0)
 	end
-end
+	if self.Players[2].Character and self.Players[2].Character.PrimaryPart then
+		self.Players[2].Character.PrimaryPart.CFrame = self.Refs.T2.CFrame + Vector3.new(0, 3, 0)
+	end
 
-function SetCountdownText(text)
-	local isVisible = (text ~= "" and text ~= nil)
-	for _, player in ipairs(Players:GetPlayers()) do
-		local gui = player:FindFirstChild("PlayerGui")
-		if gui then
-			local gameGui = gui:FindFirstChild("GameGUI")
-			if gameGui then
-				local countdown = gameGui:FindFirstChild("Countdown")
-				if countdown then
-					countdown.Visible = isVisible
-					local label = countdown:FindFirstChild("TextLabel")
-					if label then
-						label.Text = text
-					end
-				end
-			end
-		end
-	end
-end
-
-function SetPlayerControls(enabled)
-	for _, player in ipairs(playersWaiting) do
-		local character = player.Character
-		if character then
-			local humanoid = character:FindFirstChildOfClass("Humanoid")
-			if humanoid then
-				if not enabled then
-					humanoid.WalkSpeed = 0
-					humanoid.JumpPower = 0
-				else
-					humanoid.WalkSpeed = 16 -- Default
-					humanoid.JumpPower = 50 -- Default
-				end
-			end
-		end
-	end
-end
-
-local function StartKickoff(gameId)
-	clockRunning = false
-	
-	-- Teleport players
-	for i, player in ipairs(playersWaiting) do
-		if player and player.Character then
-			player.Character.PrimaryPart.CFrame = teleportCFrames[i]
-		end
-	end
-	
-	SetPlayerControls(false)
-	SetGameUIVisibility(true, gameId)
-	
-	-- Hide Goal UI at start of kickoff
-	for _, player in ipairs(Players:GetPlayers()) do
-		local gui = player:FindFirstChild("PlayerGui")
-		if gui then
-			local gameGui = gui:FindFirstChild("GameGUI")
-			if gameGui then
-				local goalFrame = gameGui:FindFirstChild("Goal")
-				if goalFrame then goalFrame.Visible = false end
-			end
-		end
-	end
-	
-	if BallSpawn then
-		ResetBallEvent:Fire(BallSpawn.Position)
+	if self.Refs.BallSpawn then
+		ResetBallEvent:Fire(self.Refs.BallSpawn.Position, self.GameId, self.Arena)
 	end
 
 	for i = 3, 1, -1 do
-		SetCountdownText(tostring(i))
+		self:SetCountdownText(tostring(i))
 		task.wait(1)
 	end
+	self:SetCountdownText("GO!")
 	
-	SetCountdownText("GO!")
-	SetPlayerControls(true)
-	clockRunning = true
-	
+	self:SetControls(true)
+	self.TimerRunning = true
 	task.wait(1)
-	SetCountdownText("")
+	self:SetCountdownText("")
 end
 
-GoalScoredEvent.Event:Connect(function(team)
-	if not InProgress then return end
+function GameInstance:RunTimer()
+	local buzzerGrace = 0
+	while self.InProgress do
+		if self.TimerRunning then
+			if not self.IsOvertime then
+				if self.RemainingTime > 0 then
+					self.RemainingTime = self.RemainingTime - 1
+				end
+				
+				if self.RemainingTime <= 0 then
+					local ball = self.Arena:FindFirstChild("Ball", true)
+					local isGrounded = not ball or ball:GetAttribute("Grounded")
+					
+					if isGrounded then
+						if self.Scores.red == self.Scores.blue then
+							self.IsOvertime = true
+							self.TimerRunning = false
+							self:Kickoff()
+						else
+							self:EndGame("Time Limit")
+							break
+						end
+					else
+						local safetyTimeout = 0
+						while self.InProgress and safetyTimeout < 15 do
+							task.wait()
+							safetyTimeout = safetyTimeout + 0.03
+							
+							ball = self.Arena:FindFirstChild("Ball", true)
+							isGrounded = not ball or ball:GetAttribute("Grounded") == true
+							
+							if isGrounded then break end
+						end
+						if self.Scores.red == self.Scores.blue then
+							self.IsOvertime = true
+							self.TimerRunning = false
+							self:Kickoff()
+						else
+							self:EndGame("Time Limit")
+							break
+						end
+					end
+				end
+			else
+				self.OvertimeSeconds = self.OvertimeSeconds + 1
+			end
+			self:UpdateClockUI()
+		end
+		task.wait(1)
+	end
+end
+
+function GameInstance:ForceEnd(reason)
+	if not self.InProgress then return end
+	self:EndGame(reason)
+end
+
+function GameInstance:EndGame(reason)
+	print("Ending Game:", self.GameId, "Reason:", reason)
+	self.InProgress = false
+	self.TimerRunning = false
 	
-	clockRunning = false
-	if team == "red" then
-		redScore = redScore + 1
-	elseif team == "blue" then
-		blueScore = blueScore + 1
+	self:SetGameUIVisibility(false)
+	
+	for _, p in ipairs(self.Players) do
+		p:SetAttribute("GameId", nil)
+		p:SetAttribute("Team", nil)
+		p.Team = Teams:FindFirstChild("Lobby")
+		p:LoadCharacter()
 	end
 	
-	UpdateScoreUI()
+	if self.Arena then
+		self.Arena:Destroy()
+	end
 	
-	-- Show Goal UI
-	for _, player in ipairs(Players:GetPlayers()) do
-		local gui = player:FindFirstChild("PlayerGui")
-		if gui then
-			local gameGui = gui:FindFirstChild("GameGUI")
-			if gameGui then
-				local goalFrame = gameGui:FindFirstChild("Goal")
-				if goalFrame then
-					goalFrame.Visible = true
-					local textLabel = goalFrame:FindFirstChild("TextLabel")
-					if textLabel then
-						textLabel.Text = string.upper(team) .. " SCORED"
+	ActiveGames[self.GameId] = nil
+end
+
+function GameInstance:SetGameUIVisibility(visible)
+	for _, p in ipairs(self.Players) do
+		local gui = p:FindFirstChild("PlayerGui")
+		if gui and gui:FindFirstChild("GameGUI") then
+			local screen = gui.GameGUI:FindFirstChild("GameScreen")
+			if screen then 
+				screen.Visible = visible 
+			end
+		end
+	end
+end
+
+function GameInstance:UpdateScoreUI()
+	for _, p in ipairs(self.Players) do
+		local gui = p:FindFirstChild("PlayerGui")
+		if gui and gui:FindFirstChild("GameGUI") then
+			local screen = gui.GameGUI:FindFirstChild("GameScreen")
+			if screen then
+				if screen:FindFirstChild("Red") then screen.Red.RedScore.Text = tostring(self.Scores.red) end
+				if screen:FindFirstChild("Blue") then screen.Blue.BlueScore.Text = tostring(self.Scores.blue) end
+			end
+		end
+	end
+end
+
+function GameInstance:UpdateClockUI()
+	local min, sec, txt
+	if self.IsOvertime and not self.TimerRunning then
+		txt = "OVERTIME"
+	elseif not self.IsOvertime then
+		min = math.floor(self.RemainingTime / 60)
+		sec = self.RemainingTime % 60
+		txt = string.format("%d:%02d", min, sec)
+	else
+		min = math.floor(self.OvertimeSeconds / 60)
+		sec = self.OvertimeSeconds % 60
+		txt = string.format("+%d:%02d", min, sec)
+	end
+	
+	for _, p in ipairs(self.Players) do
+		local gui = p:FindFirstChild("PlayerGui")
+		if gui and gui:FindFirstChild("GameGUI") and gui.GameGUI:FindFirstChild("GameScreen") then
+			local clock = gui.GameGUI.GameScreen:FindFirstChild("Clock")
+			if clock then clock.ClockText.Text = txt end
+		end
+	end
+end
+
+function GameInstance:SetCountdownText(txt)
+	for _, p in ipairs(self.Players) do
+		local gui = p:FindFirstChild("PlayerGui")
+		if gui and gui:FindFirstChild("GameGUI") then
+			local cd = gui.GameGUI:FindFirstChild("Countdown")
+			if cd then
+				cd.Visible = (txt ~= "")
+				cd.TextLabel.Text = txt
+			end
+		end
+	end
+end
+
+function GameInstance:SetControls(enabled)
+	self.StoredSpeeds = self.StoredSpeeds or {}
+	
+	for _, p in ipairs(self.Players) do
+		if p.Character then
+			local hum = p.Character:FindFirstChildOfClass("Humanoid")
+			if hum then
+				if not enabled then
+					self.StoredSpeeds[p.UserId] = {
+						ws = hum.WalkSpeed,
+						jp = hum.JumpPower
+					}
+					hum.WalkSpeed = 0
+					hum.JumpPower = 0
+				else
+					local stored = self.StoredSpeeds[p.UserId]
+					if stored then
+						hum.WalkSpeed = stored.ws
+						hum.JumpPower = stored.jp
+					else
+						hum.WalkSpeed = 16
+						hum.JumpPower = 50
 					end
 				end
 			end
 		end
 	end
-
-	task.wait(3)
-	if InProgress then
-		local gameId = playersWaiting[1] and playersWaiting[1]:GetAttribute("GameId")
-		StartKickoff(gameId)
-	end
-end)
-
-local function StartGameTimer()
-	while InProgress and remainingTime > 0 do
-		if clockRunning then
-			remainingTime = remainingTime - 1
-			UpdateClockUI()
-		end
-		task.wait(1)
-	end
-
-	if remainingTime <= 0 then
-		print("Game time reached. Resetting the game.")
-		InProgress = false
-		Reset()
-	end
 end
 
-local function HandlePlayerDeath(player)
-	if InProgress then
-		InProgress = false
-		print(("player '%s' died! Resetting the game."):format(player.Name))
-		local isWaiting = table.find(playersWaiting, player)
-
-		if isWaiting then
-			-- Remove the player from the waiting list
-			table.remove(playersWaiting, isWaiting)
-			print(("player '%s' removed from waiting list."):format(player.Name))
-		end
-		timerRunning = false -- Add this line to stop the timer
-		task.wait(3)
-		Reset(player)
-	end
-end
-
--- Connect the Humanoid.Died event for each player in the playersWaiting list
-local function ConnectPlayerDeathEvents()
-	for _, player in ipairs(playersWaiting) do
-		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-
-		if humanoid then
-			humanoid.Died:Connect(function()
-				HandlePlayerDeath(player)
-			end)
-		end
-	end
-end
-
-local function Teleport()
-	print("Game Started!")
-	InProgress = true
-	if #playersWaiting < Configs.MaxPlayers.Value then
-		warn("Not enough players to start the game.")
-		Reset()
-		return
-	end
-	local gameId = game:GetService("HttpService"):GenerateGUID(false)
-	
-	for i, player in ipairs(playersWaiting) do
-		if player then
-			local teleportPosition = teleportCFrames[i]
-
-			if teleportPosition then
-				player.Character.PrimaryPart.CFrame = teleportPosition
-				
-				-- Set attributes and team
-				local teamName = (i == 1) and "red" or "blue"
-				player:SetAttribute("Team", teamName)
-				player:SetAttribute("GameId", gameId)
-				player.Team = Teams:FindFirstChild("In-Game")
-			else
-				warn("Teleport position not defined for player: " .. player.Name)
-				Reset()
+function GameInstance:ShowGoalUI(playerName)
+	for _, p in ipairs(self.Players) do
+		local gui = p:FindFirstChild("PlayerGui")
+		if gui and gui:FindFirstChild("GameGUI") then
+			local goalFrame = gui.GameGUI:FindFirstChild("Goal")
+			if goalFrame then
+				goalFrame.Visible = true
+				if goalFrame:FindFirstChild("TextLabel") then
+					goalFrame.TextLabel.Text = (playerName or "Someone") .. " SCORED!"
+				end
+				task.delay(3, function()
+					goalFrame.Visible = false
+				end)
 			end
-		else
-			warn("Player not found: " .. player.Name)
-			Reset()
 		end
+	end
+end
 
-		-- Connect Humanoid.Died event for each player after teleporting
-		ConnectPlayerDeathEvents()
+function GameInstance:ConnectDeaths()
+	for _, p in ipairs(self.Players) do
+		if p.Character then
+			local hum = p.Character:FindFirstChildOfClass("Humanoid")
+			if hum then
+				hum.Died:Connect(function()
+					if self.InProgress then
+						local winner = (p == self.Players[1]) and self.Players[2] or self.Players[1]
+						print(winner.Name .. " wins by disconnect/death")
+						self:EndGame("Player Died")
+					end
+				end)
+			end
+		end
+	end
+end
+
+local function TryStartGame()
+	if #PlayerQueue >= 2 then
+		local p1 = table.remove(PlayerQueue, 1)
+		local p2 = table.remove(PlayerQueue, 1)
+		
+		local usedIndices = {}
+		for _, g in pairs(ActiveGames) do usedIndices[g.OffsetIndex] = true end
+		
+		local freeIndex = 0
+		while usedIndices[freeIndex] do freeIndex = freeIndex + 1 end
+		
+		local gameId = HttpService:GenerateGUID(false)
+		local newGame = GameInstance.new(gameId, freeIndex)
+		ActiveGames[gameId] = newGame
+		
+		newGame:Start(p1, p2)
+	end
+end
+
+local LobbyRef = {
+	Plate1 = MapContainer:WaitForChild("Plate1").Zone,
+	Plate2 = MapContainer:WaitForChild("Plate2").Zone,
+	Board1 = MapContainer:WaitForChild("Plate1").Board,
+	Board2 = MapContainer:WaitForChild("Plate2").Board,
+	MainBoard = MapContainer:WaitForChild("MainBoard"),
+}
+local Zone1 = Zones.new(LobbyRef.Plate1)
+local Zone2 = Zones.new(LobbyRef.Plate2)
+
+local function UpdateLobbyBoard(board, player)
+	local frame = board.SurfaceGui.Frame
+	if player then
+		frame.PlayerName.Text = player.Name
+		board.Parent.Union.Color = Color3.new(0,1,0) 
+		task.spawn(function()
+			frame.PlayerIcon.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+		end)
+	else
+		frame.PlayerName.Text = "Waiting..."
+		board.Parent.Union.Color = Color3.new(1,1,1)
+		frame.PlayerIcon.Image = "rbxassetid://9319891706"
+	end
+end
+
+local QueuedP1 = nil
+local QueuedP2 = nil
+local LobbyCountdownTask = nil
+
+local function CancelLobbyCountdown()
+	if LobbyCountdownTask then
+		task.cancel(LobbyCountdownTask)
+		LobbyCountdownTask = nil
 	end
 	
-	StartKickoff(gameId)
-end
-
-local function RunCountdown()
-	countdownRunning = true
-	for i = Configs.StartCountDown.Value, 1, -1 do
-		MainBoard.SurfaceGui.Frame.Status.Text = "Starting in: " .. i
-		task.wait(1)
-		if #playersWaiting < Configs.MaxPlayers.Value then
-			countdownRunning = false
-			MainBoard.SurfaceGui.Frame.Status.Text = "Waiting..."
-			print("Someone Left During The Countdown.")
-			return
+	if QueuedP1 then UpdateLobbyBoard(LobbyRef.Board1, QueuedP1) end
+	if QueuedP2 then UpdateLobbyBoard(LobbyRef.Board2, QueuedP2) end
+	
+	local mainSurf = LobbyRef.MainBoard:FindFirstChild("SurfaceGui")
+	if mainSurf and mainSurf:FindFirstChild("Frame") then
+		local status = mainSurf.Frame:FindFirstChild("Status")
+		if status then status.Text = "Waiting for Players..."
+		else
+			local lbl = mainSurf.Frame:FindFirstChild("PlayerName") or mainSurf.Frame:FindFirstChildOfClass("TextLabel")
+			if lbl then lbl.Text = "Waiting..." end
 		end
 	end
-	Teleport()
-	countdownRunning = false
-	MainBoard.SurfaceGui.Frame.Status.Text = "In Progress..."
-	StartGameTimer()
 end
 
-local function PlayerLeaving(player)
-	print(("player '%s' is leaving!"):format(player.Name))
+local function StartLobbyCountdown()
+	if LobbyCountdownTask then return end
+	
+	LobbyCountdownTask = task.spawn(function()
+		for i = 5, 1, -1 do
+			local msg = "Starting in " .. i
+			if QueuedP1 then
+				LobbyRef.Board1.SurfaceGui.Frame.PlayerName.Text = msg
+			end
+			if QueuedP2 then
+				LobbyRef.Board2.SurfaceGui.Frame.PlayerName.Text = msg
+			end
+			
+			local mainSurf = LobbyRef.MainBoard:FindFirstChild("SurfaceGui")
+			if mainSurf and mainSurf:FindFirstChild("Frame") then
+				local status = mainSurf.Frame:FindFirstChild("Status")
+				if status then
+					status.Text = msg
+				else
+					local lbl = mainSurf.Frame:FindFirstChild("PlayerName") or mainSurf.Frame:FindFirstChildOfClass("TextLabel")
+					if lbl then lbl.Text = msg end
+				end
+			end
+			
+			task.wait(1)
+		end
+		
+		LobbyCountdownTask = nil
+		
+		local mainSurf = LobbyRef.MainBoard:FindFirstChild("SurfaceGui")
+		if mainSurf and mainSurf:FindFirstChild("Frame") then
+			local status = mainSurf.Frame:FindFirstChild("Status")
+			if status then status.Text = "Waiting for Players..." 
+			else
+				local lbl = mainSurf.Frame:FindFirstChild("PlayerName") or mainSurf.Frame:FindFirstChildOfClass("TextLabel")
+				if lbl then lbl.Text = "Waiting..." end
+			end
+		end
+		
+		if QueuedP1 and QueuedP2 then
+			table.insert(PlayerQueue, QueuedP1)
+			table.insert(PlayerQueue, QueuedP2)
+			
+			QueuedP1 = nil
+			QueuedP2 = nil
+			
+			UpdateLobbyBoard(LobbyRef.Board1, nil)
+			UpdateLobbyBoard(LobbyRef.Board2, nil)
+			
+			TryStartGame()
+		else
+			CancelLobbyCountdown()
+		end
+	end)
+end
 
-	local isWaiting = table.find(playersWaiting, player)
-
-	if isWaiting then
-		-- Remove the player from the waiting list
-		table.remove(playersWaiting, isWaiting)
-		print(("player '%s' removed from waiting list."):format(player.Name))
-	end
-
-	-- Check if the game is in progress
-	if InProgress then
-		print("A player left during the game. Resetting the game.")
-		timerRunning = false -- Add this line to stop the timer
-		InProgress = false
-		Reset()
+local function CheckQueue()
+	if QueuedP1 and QueuedP2 then
+		StartLobbyCountdown()
 	end
 end
 
 Zone1.playerEntered:Connect(function(player)
-	if InProgress == false then --Has to wait for the game to finish
-		print(("player '%s' entered the zone!"):format(player.Name))
-		local isWaiting = table.find(playersWaiting, player)
-
-		if player and not isWaiting and #playersWaiting < Configs.MaxPlayers.Value and not Plate1HasPlayer then
-			table.insert(playersWaiting, player)
-			Plate1HasPlayer = true
-			local userId = player.UserId
-			local content, isReady = Players:GetUserThumbnailAsync(userId, thumbType, thumbSize)
-			Plate1Board.SurfaceGui.Frame.PlayerIcon.Image = content
-			Plate1Board.SurfaceGui.Frame.PlayerName.Text = player.Name
-			Plate1Board.Parent.Union.Color = Color3.new(1, 0, 0)
-			print(playersWaiting)
-			if not countdownRunning and #playersWaiting == Configs.MaxPlayers.Value then
-				RunCountdown()
-			end
-		end
+	if not QueuedP1 then
+		QueuedP1 = player
+		UpdateLobbyBoard(LobbyRef.Board1, player)
+		CheckQueue()
 	end
 end)
-
 Zone1.playerExited:Connect(function(player)
-	print(("player '%s' exited the zone!"):format(player.Name))
-	local isWaiting = table.find(playersWaiting, player)
-	if isWaiting and Plate1HasPlayer and not InProgress then
-		table.remove(playersWaiting, isWaiting)
-		Plate1HasPlayer = false
-		Plate1Board.SurfaceGui.Frame.PlayerIcon.Image = "rbxassetid://9319891706"
-		Plate1Board.SurfaceGui.Frame.PlayerName.Text = "..."
-		Plate1Board.Parent.Union.Color = Color3.new(1, 1, 1)
-		print(playersWaiting)
+	if QueuedP1 == player then
+		QueuedP1 = nil
+		UpdateLobbyBoard(LobbyRef.Board1, nil)
+		CancelLobbyCountdown()
 	end
 end)
 
 Zone2.playerEntered:Connect(function(player)
-	if InProgress == false then --Has to wait for the game to finish
-		print(("player '%s' entered the zone!"):format(player.Name))
-		local isWaiting = table.find(playersWaiting, player)
+	if not QueuedP2 then
+		QueuedP2 = player
+		UpdateLobbyBoard(LobbyRef.Board2, player)
+		CheckQueue()
+	end
+end)
+Zone2.playerExited:Connect(function(player)
+	if QueuedP2 == player then
+		QueuedP2 = nil
+		UpdateLobbyBoard(LobbyRef.Board2, nil)
+		CancelLobbyCountdown()
+	end
+end)
 
-		if player and not isWaiting and #playersWaiting < Configs.MaxPlayers.Value and not Plate2HasPlayer then
-			table.insert(playersWaiting, player)
-			Plate2HasPlayer = true
-			local userId = player.UserId
-			local content, isReady = Players:GetUserThumbnailAsync(userId, thumbType, thumbSize)
-			Plate2Board.SurfaceGui.Frame.PlayerIcon.Image = content
-			Plate2Board.SurfaceGui.Frame.PlayerName.Text = player.Name
-			Plate2Board.Parent.Union.Color = Color3.new(1, 0, 0)
-			print(playersWaiting)
-			if not countdownRunning and #playersWaiting == Configs.MaxPlayers.Value then
-				RunCountdown()
-			end
+GoalScoredEvent.Event:Connect(function(team, gameId, hitterName)
+	local gameInst = ActiveGames[gameId]
+	if gameInst and gameInst.InProgress then
+		gameInst.TimerRunning = false
+		if team == "red" then gameInst.Scores.red += 1 end
+		if team == "blue" then gameInst.Scores.blue += 1 end
+		gameInst:UpdateScoreUI()
+		gameInst:ShowGoalUI(hitterName)
+		
+		if gameInst.IsOvertime or gameInst.RemainingTime <= 0 then
+			task.wait(2)
+			gameInst:EndGame("Buzzer Goal")
+			return
+		end
+		
+		task.wait(3)
+		if gameInst.InProgress then
+			gameInst:Kickoff()
 		end
 	end
 end)
 
-Zone2.playerExited:Connect(function(player)
-	print(("player '%s' exited the zone!"):format(player.Name))
-	local isWaiting = table.find(playersWaiting, player)
-	if isWaiting and Plate2HasPlayer and not InProgress then
-		table.remove(playersWaiting, isWaiting)
-		Plate2HasPlayer = false
-		Plate2Board.SurfaceGui.Frame.PlayerIcon.Image = "rbxassetid://9319891706"
-		Plate2Board.SurfaceGui.Frame.PlayerName.Text = "..."
-		Plate2Board.Parent.Union.Color = Color3.new(1, 1, 1)
-		print(playersWaiting)
+Players.PlayerRemoving:Connect(function(player)
+	if QueuedP1 == player then QueuedP1 = nil; UpdateLobbyBoard(LobbyRef.Board1, nil) end
+	if QueuedP2 == player then QueuedP2 = nil; UpdateLobbyBoard(LobbyRef.Board2, nil) end
+	
+	local gid = player:GetAttribute("GameId")
+	if gid and ActiveGames[gid] then
+		ActiveGames[gid]:ForceEnd("Player Left")
 	end
 end)
-
-Players.PlayerRemoving:Connect(PlayerLeaving)

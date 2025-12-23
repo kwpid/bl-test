@@ -2,42 +2,40 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TextChatService = game:GetService("TextChatService")
+local TweenService = game:GetService("TweenService")
 
-local BallPhysics = require(ReplicatedStorage.BallPhysics)
-local Config = require(ReplicatedStorage.BallConfig)
+local Vector3 = Vector3
+local task = task
+local Enum = Enum
+local workspace = workspace
+local Color3 = Color3
+local RaycastParams = RaycastParams
+local Instance = Instance
+local CFrame = CFrame
+local UDim2 = UDim2
+local math = math
+local BrickColor = BrickColor
 
-local RemoteEventsFolder = ReplicatedStorage:WaitForChild(Config.Paths.REMOTE_EVENTS_FOLDER)
-local ballUpdateEvent = RemoteEventsFolder:WaitForChild("BallUpdateEvent")
+local BallConfig = require(ReplicatedStorage:WaitForChild("BallConfig"))
+local BallPhysics = require(ReplicatedStorage:WaitForChild("BallPhysics"))
+
+local RemoteEventsFolder = ReplicatedStorage:WaitForChild(BallConfig.Paths.REMOTE_EVENTS_FOLDER)
+local RemoteEvents = {
+	ballUpdate = RemoteEventsFolder:WaitForChild("BallUpdateEvent"),
+}
+local ServerEvents = {}
+ServerEvents.ballHit = RemoteEventsFolder:WaitForChild("ServerBallHit")
+
 local player = Players.LocalPlayer
-local ball = workspace:FindFirstChild("Ball")
-if not ball then
-	-- Wait for the ball to be spawned by the server
-	ball = workspace:WaitForChild("Ball", 30)
-end
+local camera = workspace.CurrentCamera
 
-if not ball then
-	error("Ball not found in Workspace after waiting! Ensure BallServer.lua is correctly spawning it.")
-end
+local currentBall = nil
+local clientBall = nil
+local clientState = BallPhysics.new(Vector3.zero)
+local serverState = BallPhysics.new(Vector3.zero)
 
-
-
--- Clean up old local ball if it exists
-for _, child in ipairs(workspace:GetChildren()) do
-	if child.Name == "ClientBall" and child:IsA("BasePart") then
-		child:Destroy()
-	end
-end
-
-local clientBall = ball:Clone()
-clientBall.Name = "ClientBall"
-clientBall.Transparency = 0
-clientBall.CanCollide = false
-clientBall.Anchored = true -- Script handles movement
-clientBall.Parent = workspace
-
-ball.Transparency = 1
-ball.Anchored = true -- Ensure server ball is also anchored
-
+-- State & Debug Flags
 local debugFolder = workspace:FindFirstChild("BallDebug")
 if not debugFolder then
 	debugFolder = Instance.new("Folder")
@@ -45,222 +43,213 @@ if not debugFolder then
 	debugFolder.Parent = workspace
 end
 
-local TextChatService = game:GetService("TextChatService")
-
-local clientState = BallPhysics.new(clientBall.Position)
-local serverStateBuffer = {}
-local lastServerUpdate = tick()
-
-
-
 local debugEnabled = false
 local debugHitboxEnabled = false
 local balLCamEnabled = false
 local originalCameraSubject = nil
 
-
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 
+-- Helper Functions
+local function createClientBall()
+	if clientBall then clientBall:Destroy() end
+	clientBall = ReplicatedStorage:WaitForChild("Ball"):Clone()
+	clientBall.Name = "ClientBall"
+	clientBall.Transparency = 0
+	clientBall.CanCollide = false
+	clientBall.Anchored = true
+	clientBall.Parent = workspace
+	
+	local highlight = Instance.new("Highlight")
+	highlight.FillTransparency = 1
+	highlight.OutlineTransparency = 0
+	highlight.OutlineColor = Color3.new(1, 1, 1)
+	highlight.Parent = clientBall
+end
+
 local function updateRaycastFilter()
-	local filterList = { ball, clientBall }
-
-	if debugFolder then
-		table.insert(filterList, debugFolder)
-	end
-
+	local filterList = { currentBall, clientBall }
+	if debugFolder then table.insert(filterList, debugFolder) end
 	for _, p in ipairs(Players:GetPlayers()) do
-		if p.Character then
-			table.insert(filterList, p.Character)
+		if p.Character then table.insert(filterList, p.Character) end
+	end
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			local name = obj.Name:lower()
+			local isMarker = name == "ballspawn" or name == "t1" or name == "t2" or name:find("plate")
+			local isHitbox = name == "hitbox"
+			local isFloor = name:find("floor") or name:find("field") or name:find("arena")
+			local isTransparent = obj.Transparency >= 0.9 
+			local isMesh = obj:IsA("MeshPart")
+			if isMarker or ((isTransparent or isMesh) and not isHitbox and not isFloor) then
+				table.insert(filterList, obj)
+			end
 		end
 	end
-
 	raycastParams.FilterDescendantsInstances = filterList
 end
 
-local function onPlayerAdded(p)
-	p.CharacterAdded:Connect(function()
-		task.wait(0.1)
-		updateRaycastFilter()
-	end)
+local function findMyBall()
+	local myGameId = player:GetAttribute("GameId")
+	if myGameId then
+		for _, desc in ipairs(workspace:GetDescendants()) do
+			if desc.Name == "Ball" and desc:GetAttribute("GameId") == myGameId then
+				return desc
+			end
+		end
+	end
+	return nil
 end
-
-Players.PlayerAdded:Connect(onPlayerAdded)
-for _, p in ipairs(Players:GetPlayers()) do
-	onPlayerAdded(p)
-end
-
-updateRaycastFilter()
 
 local function getHitRange()
 	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-		return Config.Parry.MOBILE_RANGE
+		return BallConfig.Parry.MOBILE_RANGE
 	elseif UserInputService.GamepadEnabled then
-		return Config.Parry.CONSOLE_RANGE
+		return BallConfig.Parry.CONSOLE_RANGE
 	else
-		return Config.Parry.RANGE
+		return BallConfig.Parry.RANGE
 	end
 end
-
--- chat command 4 debugs
-TextChatService.SendingMessage:Connect(function(message)
-	local isDev = false
-	if Config.Debug and Config.Debug.DeveloperIds then
-		for _, id in ipairs(Config.Debug.DeveloperIds) do
-			if player.UserId == id then
-				isDev = true
-				break
-			end
-		end
-	end
-
-		if isDev then
-		if message.Text == "/debug" then
-			debugEnabled = not debugEnabled
-		elseif message.Text == "/debug:reset" then
-			local debugResetEvent = RemoteEventsFolder:WaitForChild("DebugReset", 5)
-			if debugResetEvent then
-				debugResetEvent:FireServer()
-			else
-				warn("DebugReset event not found")
-			end
-		elseif message.Text == "/debug:hitbox" then
-			debugHitboxEnabled = not debugHitboxEnabled
-		elseif message.Text == "/debug:freeze" then
-			local debugFreezeEvent = RemoteEventsFolder:WaitForChild("DebugFreeze", 5)
-			if debugFreezeEvent then
-				debugFreezeEvent:FireServer()
-			else
-				warn("DebugFreeze event not found")
-			end
-		elseif message.Text == "/debug:unfreeze" then
-			local debugUnfreezeEvent = RemoteEventsFolder:WaitForChild("DebugUnfreeze", 5)
-			if debugUnfreezeEvent then
-				debugUnfreezeEvent:FireServer()
-			else
-				warn("DebugUnfreeze event not found")
-			end
-		elseif message.Text == "/ballcam" then
-			ballCamEnabled = not ballCamEnabled
-			local camera = workspace.CurrentCamera
-
-			if ballCamEnabled then
-				originalCameraSubject = camera.CameraSubject
-				camera.CameraSubject = clientBall
-				camera.CameraType = Enum.CameraType.Follow
-			else
-				if originalCameraSubject then
-					camera.CameraSubject = originalCameraSubject
-				end
-				camera.CameraType = Enum.CameraType.Custom
-			end
-		end
-	end
-end)
-
-local function interpolateColor(percent)
-	return Color3.new(1, 1, 1):Lerp(Color3.new(0.7, 0.6, 1), percent)
-end
-
-ballUpdateEvent.OnClientEvent:Connect(function(serverState)
-	table.insert(serverStateBuffer, {
-		state = serverState,
-		timestamp = tick(),
-	})
-
-	if #serverStateBuffer > 10 then
-		table.remove(serverStateBuffer, 1)
-	end
-
-	lastServerUpdate = tick()
-end)
 
 local function checkCollision(from, to)
 	local direction = (to - from)
 	local distance = direction.Magnitude
-	if distance == 0 then
-		return nil
-	end
-
+	if distance < 0.001 then return nil end
 	local rayResult = workspace:Raycast(from, direction.Unit * (distance + clientBall.Size.X / 2), raycastParams)
 	return rayResult
 end
 
 local function getGroundHeight(position)
-	local rayOrigin = Vector3.new(position.X, position.Y + 10, position.Z)
-	local rayDirection = Vector3.new(0, -200, 0)
+	local rayOrigin = Vector3.new(position.X, position.Y + 2, position.Z)
+	local rayDirection = Vector3.new(0, -300, 0)
 	local rayResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-	return rayResult and rayResult.Position.Y or 0
+	if rayResult then return rayResult.Position.Y end
+	
+	local backupOrigin = Vector3.new(position.X, position.Y + 100, position.Z)
+	local backupResult = workspace:Raycast(backupOrigin, rayDirection, raycastParams)
+	return backupResult and backupResult.Position.Y or 0
 end
 
-RunService.Heartbeat:Connect(function(dt)
-	if #serverStateBuffer > 0 then
-		local serverState = serverStateBuffer[#serverStateBuffer].state
+RemoteEvents.ballUpdate.OnClientEvent:Connect(function(serializedState, gameId)
+	local myGameId = player:GetAttribute("GameId")
+	if gameId == myGameId then
+		serverState:deserialize(serializedState)
+		if (serverState.position - clientState.position).Magnitude > 5 then
+			clientState:deserialize(serializedState)
+		end
+		if serverState.color then clientState.color = serverState.color end
+		if serverState.transparency ~= nil then clientState.transparency = serverState.transparency end
+	end
+end)
 
-		local positionDiff = (serverState.position - clientState.position).Magnitude
-		if positionDiff > 8 then
-			clientState:deserialize(serverState)
-		else
-			local velocityDiff = (serverState.velocity - clientState.velocity).Magnitude
-			local isHit = velocityDiff > 20
+Players.PlayerAdded:Connect(function(p)
+	p.CharacterAdded:Connect(function() task.wait(0.1); updateRaycastFilter() end)
+end)
+updateRaycastFilter()
 
-			if isHit then
-				clientState.velocity = serverState.velocity
-				local alpha = math.clamp(dt * 20, 0, 0.6)
-				clientState.position = clientState.position:Lerp(serverState.position, alpha)
-			else
-				local alpha = math.clamp(dt * 12, 0, 0.5)
-
-				clientState.position = clientState.position:Lerp(serverState.position, alpha)
-				clientState.velocity = clientState.velocity:Lerp(serverState.velocity, alpha * 0.8)
-			end
-
-			clientState.isMoving = serverState.isMoving
-			clientState.hitCount = serverState.hitCount
-			clientState.lastHitter = serverState.lastHitter
-			if serverState.color and serverState.color ~= clientState.color then
-				print("COLOR SYNC: Server=" .. tostring(serverState.color) .. " Client=" .. tostring(clientState.color))
-				clientState.color = serverState.color
-			end
-			if serverState.transparency ~= nil and serverState.transparency ~= clientState.transparency then
-				print("TRANSPARENCY SYNC: Server=" .. tostring(serverState.transparency) .. " Client=" .. tostring(clientState.transparency))
-				clientState.transparency = serverState.transparency
-			end
+TextChatService.SendingMessage:Connect(function(message)
+	local isDev = false
+	if BallConfig.Debug and BallConfig.Debug.DeveloperIds then
+		for _, id in ipairs(BallConfig.Debug.DeveloperIds) do
+			if player.UserId == id then isDev = true; break end
 		end
 	end
-
-	if tick() - lastServerUpdate < 1.0 then
-		local groundHeight = getGroundHeight(clientState.position)
-		clientState:update(dt, checkCollision, groundHeight, clientBall.Size.X / 2)
-
-		clientState:enforceFloatHeight(groundHeight)
+	if not isDev then return end
+	
+	if message.Text == "/debug" then debugEnabled = not debugEnabled
+	elseif message.Text == "/debug:hitbox" then debugHitboxEnabled = not debugHitboxEnabled
+	elseif message.Text == "/ballcam" then
+		balLCamEnabled = not balLCamEnabled
+		local cam = workspace.CurrentCamera
+		if balLCamEnabled then
+			originalCameraSubject = cam.CameraSubject
+			cam.CameraSubject = clientBall
+			cam.CameraType = Enum.CameraType.Follow
+		else
+			if originalCameraSubject then cam.CameraSubject = originalCameraSubject end
+			cam.CameraType = Enum.CameraType.Custom
+		end
 	end
+end)
+
+task.spawn(function()
+	while true do
+		local found = findMyBall()
+		if found ~= currentBall then
+			currentBall = found
+			if currentBall then
+				print("BallClient: Found my ball:", currentBall:GetFullName())
+				-- int. sync
+				local s = BallPhysics.new(currentBall.Position)
+				serverState:deserialize(s:serialize())
+				clientState:deserialize(s:serialize())
+				if not clientBall then createClientBall() end
+				updateRaycastFilter()
+			end
+		end
+		task.wait(1)
+	end
+end)
+
+RunService.Heartbeat:Connect(function(dt)
+	if not currentBall or not currentBall.Parent or not clientBall then
+		if clientBall then
+			clientBall:Destroy()
+			clientBall = nil
+		end
+		return
+	end
+	
+	local lerpSpeed = 15
+	local lerpFactor = math.clamp(dt * lerpSpeed, 0, 1)
+	if serverState.isMoving then
+		clientState.velocity = clientState.velocity:Lerp(serverState.velocity, lerpFactor)
+		clientState:update(dt, checkCollision, getGroundHeight(clientState.position), clientBall.Size.X / 2, function(collision, impactSpeed)
+			if impactSpeed and impactSpeed > 5 then
+				if clientBall:FindFirstChild("Bounce") then clientBall.Bounce:Play() end
+			end
+		end)
+		clientState.position = clientState.position:Lerp(serverState.position, lerpFactor * 0.5)
+	else
+		clientState.position = clientState.position:Lerp(serverState.position, lerpFactor)
+		clientState.velocity = Vector3.zero
+		clientState.isMoving = false
+	end
+	-- vis sync
 	clientBall.Position = clientState.position
 	clientBall.Color = clientState.color
 	clientBall.Transparency = clientState.transparency or 0
 	
-	-- Update LastTeam attribute on client ball
+	currentBall.Transparency = 1
+	for _, desc in ipairs(currentBall:GetDescendants()) do
+		if desc:IsA("BasePart") or desc:IsA("Decal") or desc:IsA("Texture") then
+			desc.Transparency = 1
+		elseif desc:IsA("ParticleEmitter") or desc:IsA("Trail") or desc:IsA("Beam") then
+			desc.Enabled = false
+		elseif desc:IsA("Light") then
+			desc.Enabled = false
+		end
+	end
 	if clientState.lastHitter and clientState.lastHitter ~= "None" then
 		local lastHitterPlayer = Players:FindFirstChild(clientState.lastHitter)
 		if lastHitterPlayer then
 			local team = lastHitterPlayer:GetAttribute("Team")
-			if team then
-				clientBall:SetAttribute("LastTeam", team)
-			end
+			if team then clientBall:SetAttribute("LastTeam", team) end
 		end
 	end
 
-	if ballCamEnabled then
-		local camera = workspace.CurrentCamera
-		if camera.CameraSubject ~= clientBall then
-			camera.CameraSubject = clientBall
-			camera.CameraType = Enum.CameraType.Follow
+	if balLCamEnabled then
+		local cam = workspace.CurrentCamera
+		if cam.CameraSubject ~= clientBall then
+			cam.CameraSubject = clientBall
+			cam.CameraType = Enum.CameraType.Follow
 		end
 	end
 
-	local speedPercent = clientState:getSpeedPercent()
+	-- debug vis
+	if not debugEnabled and not debugHitboxEnabled then return end
 
-	-- Debug Visualization
 	local debugGui = clientBall:FindFirstChild("DebugGui")
 	if not debugGui then
 		debugGui = Instance.new("BillboardGui")
@@ -270,7 +259,7 @@ RunService.Heartbeat:Connect(function(dt)
 		debugGui.AlwaysOnTop = true
 		debugGui.Parent = clientBall
 
-		local textLabel = Instance.new("TextLabel")
+		local textLabel = Instance.new("TextLabel", debugGui)
 		textLabel.Name = "TextLabel"
 		textLabel.Size = UDim2.new(1, 0, 1, 0)
 		textLabel.BackgroundTransparency = 1
@@ -280,40 +269,17 @@ RunService.Heartbeat:Connect(function(dt)
 		textLabel.TextSize = 18
 		textLabel.TextXAlignment = Enum.TextXAlignment.Left
 		textLabel.TextYAlignment = Enum.TextYAlignment.Top
-		textLabel.Parent = debugGui
 	end
 
-	local groundHeight = getGroundHeight(clientState.position)
-	local heightOffFloat = clientState.position.Y - (groundHeight + Config.Physics.FLOAT_HEIGHT)
-	local maxSpeed
-	if clientState.hitCount == 0 then
-		maxSpeed = Config.Physics.BASE_SPEED
-	else
-		maxSpeed = Config.Physics.START_SPEED + (clientState.hitCount - 1) * Config.Physics.SPEED_INCREMENT
-	end
-
-	maxSpeed = math.min(maxSpeed, Config.Physics.MAX_SPEED)
-	local verticalSpeed = clientState.velocity.Y
-
+	local gHeight = getGroundHeight(clientState.position)
+	local isBallGrounded = currentBall:GetAttribute("Grounded")
 	local debugText = string.format(
-		"VELOCITY          POSITION\n"
-			.. "Speed: %.1f       Height: %.1f\n"
-			.. "Vert:  %.1f       \n\n"
-			.. "STATS             INFO\n"
-			.. "Hits:  %d         Last: %s\n"
-			.. "Max:   %.1f",
-		clientState.velocity.Magnitude,
-		heightOffFloat,
-		verticalSpeed,
-		clientState.hitCount,
+		"Speed: %.1f\nHits: %d\nLast: %s\nGrounded: %s", 
+		clientState.velocity.Magnitude, 
+		clientState.hitCount, 
 		clientState.lastHitter or "None",
-		maxSpeed
+		tostring(isBallGrounded)
 	)
-
-	if clientState.isFrozen and debugEnabled then
-		debugText = "FROZEN\n\n" .. debugText
-	end
-
 	debugGui.TextLabel.Text = debugText
 	debugGui.Enabled = debugEnabled
 
@@ -330,17 +296,14 @@ RunService.Heartbeat:Connect(function(dt)
 			hitboxPart.Transparency = 0.85
 			hitboxPart.Material = Enum.Material.Neon
 			hitboxPart.Color = Color3.new(1, 0, 0)
-			hitboxPart.Size = Vector3.new(1, 1, 1)
 			hitboxPart.Parent = workspace
 		end
-
 		local hitRange = getHitRange()
 		hitboxPart.Size = Vector3.new(hitRange * 2, hitRange * 2, hitRange * 2)
 		hitboxPart.CFrame = player.Character.HumanoidRootPart.CFrame
 	elseif hitboxPart then
 		hitboxPart:Destroy()
-	end	
-
+	end
 
 	local debugParts = debugFolder:GetChildren()
 	local partIndex = 1
@@ -363,11 +326,8 @@ RunService.Heartbeat:Connect(function(dt)
 			return part
 		end
 
-		-- 1. float point line (blue)
-		local groundHeight = getGroundHeight(clientState.position)
-		local floatPoint = Vector3.new(clientState.position.X, groundHeight, clientState.position.Z)
+		local floatPoint = Vector3.new(clientState.position.X, gHeight, clientState.position.Z)
 		local distToFloat = (clientState.position - floatPoint).Magnitude
-
 		if distToFloat > 0.1 then
 			local part = getDebugPart()
 			part.Color = Color3.new(0, 0, 1) 
@@ -376,60 +336,25 @@ RunService.Heartbeat:Connect(function(dt)
 			part.Transparency = 0.5
 		end
 
-		-- 2. velocity vector (green)
-		if clientState.velocity.Magnitude > 0.1 then
-			local part = getDebugPart()
-			part.Color = Color3.new(0, 1, 0) 
-			local len = math.min(clientState.velocity.Magnitude / 10, 10) 
-			part.Size = Vector3.new(0.1, 0.1, len)
-			part.CFrame = CFrame.lookAt(clientState.position, clientState.position + clientState.velocity)
-				* CFrame.new(0, 0, -len / 2)
-			part.Transparency = 0
-		end
-
-		-- 3. ball predict path (Red)
 		if clientState.isMoving then
 			local ghostState = BallPhysics.new(clientState.position)
 			ghostState:deserialize(clientState:serialize())
 
-			-- ball predict config
 			local collisionCount = 0
-			local maxCollisions = 10 
 			local simDt = 1 / 60
-			local maxSteps = 1200 
-
 			local points = { ghostState.position }
 
-			for i = 1, maxSteps do
-				if collisionCount >= maxCollisions then
-					break
-				end
-
-				local collided = false
-				ghostState:update(
-					simDt,
-					checkCollision,
-					getGroundHeight(ghostState.position),
-					clientBall.Size.X / 2,
-					function()
-						collided = true
-						collisionCount = collisionCount + 1
-					end
-				)
-
-				if i % 2 == 0 then
-					table.insert(points, ghostState.position)
-				end
-
-				if not ghostState.isMoving then
-					break
-				end
+			for i = 1, 1200 do
+				if collisionCount >= 10 then break end
+				ghostState:update(simDt, checkCollision, getGroundHeight(ghostState.position), clientBall.Size.X / 2, function()
+					collisionCount = collisionCount + 1
+				end)
+				if i % 2 == 0 then table.insert(points, ghostState.position) end
+				if not ghostState.isMoving then break end
 			end
 
-			-- draw lines between points
 			for i = 1, #points - 1 do
-				local p1 = points[i]
-				local p2 = points[i + 1]
+				local p1, p2 = points[i], points[i+1]
 				local dist = (p2 - p1).Magnitude
 				if dist > 0.1 then
 					local part = getDebugPart()
@@ -442,7 +367,6 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 	end
 
-	-- hide unused parts
 	for i = partIndex, #debugParts do
 		debugParts[i].Transparency = 1
 		debugParts[i].CFrame = CFrame.new(0, -1000, 0)
