@@ -96,9 +96,10 @@ local function updateRaycastFilter()
 			local isMarker = name == "ballspawn" or name == "t1" or name == "t2" or name:find("plate")
 			local isHitbox = name == "hitbox"
 			local isFloor = name:find("floor") or name:find("field") or name:find("arena")
+			local isGoal = name:find("goaldetector")
 			local isTransparent = obj.Transparency >= 0.9 
 			local isMesh = obj:IsA("MeshPart")
-			if isMarker or ((isTransparent or isMesh) and not isHitbox and not isFloor) then
+			if isMarker or ((isTransparent or isMesh) and not isHitbox and not isFloor and not isGoal) then
 				table.insert(filterList, obj)
 			end
 		end

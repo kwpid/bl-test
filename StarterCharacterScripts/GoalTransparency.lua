@@ -6,21 +6,21 @@ local character = script.Parent
 local camera = workspace.CurrentCamera
 
 local FADED_TRANSPARENCY = 0.8
-local fadingParts = {} 
+local fadingParts = {}
 
 function updateTransparency()
 	local head = character:FindFirstChild("Head")
 	if not head then return end
 	
 	local ignoreList = {character}
-	local obstructingParts = camera:GetPartsObstructingTarget({head.Position}, ignoreList)
+	local obstructingParts = camera:GetPartsObscuringTarget({head.Position}, ignoreList)
 	
 	local currentFrameObstructing = {}
 	
 	for _, part in ipairs(obstructingParts) do
 		if part.Name == "Main" and part:IsA("BasePart") then
 			currentFrameObstructing[part] = true
-
+			
 			if not fadingParts[part] then
 				fadingParts[part] = part.Transparency
 				part.Transparency = FADED_TRANSPARENCY

@@ -150,6 +150,20 @@ local function checkCollision(from, to, ballSize)
         end
 
         local rayResult = workspace:Raycast(from, direction.Unit * (distance + ballSize / 2), raycastParams)
+
+        if rayResult and ballObject then
+                local hitName = rayResult.Instance.Name:lower()
+                if hitName:find("goaldetector") then 
+                        local lastTeam = ballObject:GetAttribute("LastTeam")
+                        local isRedGoal = hitName:find("red")
+                        local isBlueGoal = hitName:find("blue")
+
+                        if (lastTeam == "red" and isRedGoal) or (lastTeam == "blue" and isBlueGoal) then
+                                return nil
+                        end
+                end   
+        end
+
         if rayResult then
                 print("Ball Hit:", rayResult.Instance:GetFullName())
         end
@@ -193,6 +207,7 @@ RunService.Heartbeat:Connect(function(dt)
                                 if ball:GetAttribute("Grounded") ~= isGrounded then
                                         ball:SetAttribute("Grounded", isGrounded)
                                 end
+                                ball:SetAttribute("Velocity", ballState.velocity)
                         end
 
                         ball.Position = ballState.position

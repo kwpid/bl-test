@@ -144,8 +144,11 @@ local function createParryWindow(player, character, animator, animations, weld, 
 		end
 
 		local distance = (hrp.Position - ball.Position).Magnitude
+		local velocity = ball:GetAttribute("Velocity") or Vector3.zero
+		local predictedPosition = ball.Position + (velocity * 0.1)
+		local predictedDistance = (hrp.Position - predictedPosition).Magnitude
 
-		if distance <= parryWindow.parryRange then
+		if distance <= parryWindow.parryRange or predictedDistance <= parryWindow.parryRange then
 			parryWindow.hitBall = true
 			parryWindow.active = false
 
