@@ -133,7 +133,22 @@ local function checkCollision(from, to)
 	local direction = (to - from)
 	local distance = direction.Magnitude
 	if distance < 0.001 then return nil end
-	local rayResult = workspace:Raycast(from, direction.Unit * (distance + clientBall.Size.X / 2), raycastParams)
+	local ballSize = clientBall and clientBall.Size.X or 4
+	local rayResult = workspace:Raycast(from, direction.Unit * (distance + ballSize / 2), raycastParams)
+	
+	if rayResult and clientBall then
+		local hitName = rayResult.Instance.Name:lower()
+		if hitName:find("goaldetector") then
+			local lastTeam = clientBall:GetAttribute("LastTeam")
+			local isRedGoal = hitName:find("red")
+			local isBlueGoal = hitName:find("blue")
+
+			if (lastTeam == "blue" and isRedGoal) or (lastTeam == "red" and isBlueGoal) then
+				return nil
+			end
+		end
+	end
+
 	return rayResult
 end
 
@@ -224,7 +239,7 @@ RunService.Heartbeat:Connect(function(dt)
 		return
 	end
 
-	local lerpSpeed = 15
+	local lerpSpeed = 20
 	local lerpFactor = math.clamp(dt * lerpSpeed, 0, 1)
 	if serverState.isMoving then
 		clientState.velocity = clientState.velocity:Lerp(serverState.velocity, lerpFactor)
@@ -233,7 +248,13 @@ RunService.Heartbeat:Connect(function(dt)
 				if clientBall:FindFirstChild("Bounce") then clientBall.Bounce:Play() end
 			end
 		end)
-		clientState.position = clientState.position:Lerp(serverState.position, lerpFactor * 0.5)
+
+		local drift = (serverState.position - clientState.position).Magnitude
+		if drift > 10 then
+			clientState.position = serverState.position
+		else
+			clientState.position = clientState.position:Lerp(serverState.position, lerpFactor)
+		end
 	else
 		clientState.position = clientState.position:Lerp(serverState.position, lerpFactor)
 		clientState.velocity = Vector3.zero

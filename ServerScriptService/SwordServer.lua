@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local Vector3 = Vector3
 
 local Config = require(ReplicatedStorage.BallConfig)
 
@@ -84,7 +85,7 @@ local function setBallHitImmunity(userId)
 	ballHitImmunity[userId] = tick()
 end
 
-local function createParryWindow(player, character, animator, animations, weld, attachments, cameraDirection)
+local function createParryWindow(player, character, animator, animations, weld, attachments, cameraDirection, handle)
 	local data = playerData[player.UserId]
 	local parryRange = Config.Parry.RANGE
 
@@ -92,6 +93,22 @@ local function createParryWindow(player, character, animator, animations, weld, 
 		parryRange = Config.Parry.MOBILE_RANGE
 	elseif data and data.deviceType == "Console" then
 		parryRange = Config.Parry.CONSOLE_RANGE
+	end
+
+	-- trail manager
+	local trail = nil
+	local att0 = handle:FindFirstChild("att0")
+	if att0 then
+		trail = att0:FindFirstChild("slash")
+		if trail and trail:IsA("Trail") then
+			trail.Enabled = true
+		end
+	end
+
+	local function disableTrail()
+		if trail then
+			trail.Enabled = false
+		end
 	end
 
 	local parryWindow = {
@@ -109,6 +126,7 @@ local function createParryWindow(player, character, animator, animations, weld, 
 	parryWindow.connection = RunService.Heartbeat:Connect(function()
 		if not parryWindow.active then
 			parryWindow.connection:Disconnect()
+			disableTrail()
 			return
 		end
 
@@ -131,6 +149,7 @@ local function createParryWindow(player, character, animator, animations, weld, 
 		local hrp = character:FindFirstChild("HumanoidRootPart")
 		if not hrp then 
 			parryWindow.active = false
+			disableTrail()
 			return 
 		end
 
@@ -151,6 +170,7 @@ local function createParryWindow(player, character, animator, animations, weld, 
 		if distance <= parryWindow.parryRange or predictedDistance <= parryWindow.parryRange then
 			parryWindow.hitBall = true
 			parryWindow.active = false
+			disableTrail()
 
 			setBallHitImmunity(player.UserId)
 
@@ -170,6 +190,7 @@ local function createParryWindow(player, character, animator, animations, weld, 
 				weld.Part0 = attachments.torso
 				weld.C0 = attachments.torsoAttachment.CFrame
 				weld.C1 = attachments.sword.CFrame
+				disableTrail()
 			end)
 
 			playerData[player.UserId].cooldown = false
@@ -179,6 +200,7 @@ local function createParryWindow(player, character, animator, animations, weld, 
 	failTrack.Stopped:Connect(function()
 		if parryWindow.active then
 			parryWindow.active = false
+			disableTrail()
 			playerData[player.UserId].cooldown = false
 		end
 	end)
@@ -186,6 +208,7 @@ local function createParryWindow(player, character, animator, animations, weld, 
 	task.delay(Config.Parry.TIMEOUT, function()
 		if parryWindow.active then
 			parryWindow.active = false
+			disableTrail()
 			failTrack:Stop()
 			playerData[player.UserId].cooldown = false
 		end
@@ -262,7 +285,7 @@ local function onSwing(player, cameraDirection)
 		return
 	end
 
-	createParryWindow(player, character, animator, animations, weld, attachments, cameraDirection)
+	createParryWindow(player, character, animator, animations, weld, attachments, cameraDirection, handle)
 end
 
 local function onDeviceType(player, deviceType)

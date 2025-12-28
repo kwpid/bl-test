@@ -50,7 +50,7 @@ function BallPhysics:update(dt, raycastFunc, groundHeight, radius, onCollision)
                 return false
         end
 
-        self.velocity = self.velocity * Config.Physics.DECELERATION
+        self.velocity = self.velocity * (Config.Physics.DECELERATION ^ (dt * 60))
 
         local currentSpeed = self.velocity.Magnitude
         if currentSpeed < Config.Physics.GRAVITY_THRESHOLD then
